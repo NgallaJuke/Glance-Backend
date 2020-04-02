@@ -1,0 +1,20 @@
+{
+  "name": "tailor",
+  "version": "1.0.0",
+  "description": "Tailors Social Media App",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js"
+  },
+  "author": "Ngalla Juke",
+  "license": "ISC",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
