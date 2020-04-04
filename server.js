@@ -10,6 +10,19 @@ dotenv.config({ path: "./config/config.env" });
 const DBconnect = require("./config/db.js");
 DBconnect();
 
+//Get the Routes
+const userRoute = require("./routes/user");
+
+//use the routes
+app.use("/api/v1/user", userRoute);
+
 // setting up port
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`App running on port ${PORT}`.blue.bold));
+app.listen(PORT, () =>
+  console.log(
+    ` Server runing in `.blue +
+      `${process.env.NODE_ENV}`.blue.underline.bold +
+      ` mode on port `.blue +
+      `${PORT}`.blue.underline.bold
+  )
+);
