@@ -23,6 +23,7 @@ const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
     maxlength: 30,
+    unique: [true, "this username is already exist"],
     required: [true, "Please add your userName"],
   },
   password: {
@@ -34,14 +35,16 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
+    required: [true, "Please choose a user type"],
     enum: ["costumer", "tailor"],
     default: "costumer",
   },
+  following: { type: String },
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
   createdAt: {
+    type: Date,
     default: Date.now,
-  },
-  following: {
-    id: String,
   },
 });
 

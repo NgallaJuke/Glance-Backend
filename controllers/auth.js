@@ -1,13 +1,22 @@
-// const mongoose =require('mongoose')
-// const User = require('../models/User')
-// const bcrypt = require('bcrypt')
+const mongoose = require("mongoose");
+const User = require("../models/User");
+const bcrypt = require("bcrypt");
 
-// exports.Register = (async (req,res)=>{
-//   // get this variable from the req.body = form registration
-//   const {email, firsName,lastName,UserName,role,Password} = req.body
+// @desc   Register User
+// @route   GET /api/v1/auth/register
+// @access  Public
+exports.Register = async (req, res) => {
+  // get this variable from the req.body = form registration
+  const { email, firstName, lastName, userName, role, password } = req.body;
 
-//   // create the user from thos information
-//   const user = await User.create({
-//     email, firsName,lastName,UserName,role,Password
-//   })
-// })
+  // create user
+  const user = await User.create({
+    email,
+    firstName,
+    lastName,
+    userName,
+    role,
+    password,
+  });
+  res.status(200).json({ success: true });
+};
