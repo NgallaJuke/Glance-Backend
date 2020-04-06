@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
-const bcrypt = require("bcrypt");
 
 // @desc   Register User
 // @route   GET /api/v1/auth/register
@@ -18,5 +17,7 @@ exports.Register = async (req, res) => {
     role,
     password,
   });
-  res.status(200).json({ success: true });
+
+  const token = await user.getSignedJWTtoken();
+  res.status(200).json({ success: true, token });
 };

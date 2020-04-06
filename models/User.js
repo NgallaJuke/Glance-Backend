@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const UserSchema = new mongoose.Schema({
   email: {
@@ -47,5 +49,30 @@ const UserSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+/* ----------------NOTE------------------- */
+/*
+const user = new User.create({...})
+....... user.createToken
+
+-STATICS are called in the model itself -> here create is a STATIC
+-METHODS are called in what you initialize on the model 
+  or get from the model -> createToken is a methode
+*/
+/* ----------------------------------- */
+
+// incrypt password using bcript
+UserSchema.pre("save", async function (next) {
+  // gen the salt
+  const salt = await bcrypt.genSalt(10);
+  //hash the password
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+// Sign JWT an return
+UserSchema.methods.getSignedJWTtoken = function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_SCRT, {
+    expiresIn: process.env.JWT_EXP,
+  });
+};
 
 module.exports = mongoose.model("User", UserSchema);
