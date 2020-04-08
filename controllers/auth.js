@@ -19,10 +19,7 @@ exports.Register = asyncHandler(async (req, res) => {
     password,
   });
 
-  //get the token from the methods we created at the User Model: getSignedJWTtoken()
-  const token = await user.getSignedJWTtoken();
-
-  res.status(200).json({ success: true, token });
+  SendTokentoCokkieResponse(user, 200, res);
 });
 
 // @desc    Login User
@@ -44,9 +41,26 @@ exports.Login = asyncHandler(async (req, res, next) => {
   //Compare the user's password to the user's password saved in the database using the methods created at the User Model
   const pwdMatches = await user.matchPassword(password);
   if (!pwdMatches) return next(new ErrorResponse("Invalid credentials", 401));
+  SendTokentoCokkieResponse(user, 200, res);
+});
 
+// fonction to create the token send it via cookie to the Headers
+const SendTokentoCokkieResponse = async (user, status, res) => {
   //get the token from the methods we created at the User Model: getSignedJWTtoken()
   const token = await user.getSignedJWTtoken();
 
-  res.status(200).json({ success: true, token });
-});
+  //options for the cookie
+  const options = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOK_EXP * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+  };
+
+  if (process.env.NODE_ENV === "production") options.secure = true;
+
+  res
+    .status(status)
+    .cookie("token", token, options)
+    .json({ success: true, token });
+};
