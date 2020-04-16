@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
+
 // @desc    Register User
 // @route   POST /api/v1/auth/register
 // @access  Public
@@ -19,7 +20,7 @@ exports.Register = asyncHandler(async (req, res) => {
     password,
   });
 
-  SendTokentoCokkieResponse(user, 200, res);
+  SendTokentoCookieResponse(user, 200, res);
 });
 
 // @desc    Login User
@@ -41,15 +42,26 @@ exports.Login = asyncHandler(async (req, res, next) => {
   //Compare the user's password to the user's password saved in the database using the methods created at the User Model
   const pwdMatches = await user.matchPassword(password);
   if (!pwdMatches) return next(new ErrorResponse("Invalid credentials", 401));
-  SendTokentoCokkieResponse(user, 200, res);
+  SendTokentoCookieResponse(user, 200, res);
+});
+
+// @desc    Get Current Logged User
+// @route   GET /api/v1/auth/current-user
+// @access  Private
+exports.CurrentUser = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  console.log("User=>", user);
+
+  res.status(200).json({ success: true, data: user });
 });
 
 // fonction to create the token send it via cookie to the Headers
-const SendTokentoCokkieResponse = async (user, status, res) => {
+const SendTokentoCookieResponse = async (user, status, res) => {
   //get the token from the methods we created at the User Model: getSignedJWTtoken()
   const token = await user.getSignedJWTtoken();
 
   //options for the cookie
+  // process.env.JWT_COOK_EXP is in Day so trun in into ms
   const options = {
     expires: new Date(
       Date.now() + process.env.JWT_COOK_EXP * 24 * 60 * 60 * 1000

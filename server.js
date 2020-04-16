@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
+const errorHandler = require("./middleware/error");
 const color = require("colors");
 const app = express();
 const bodyParser = require("body-parser");
@@ -30,6 +31,9 @@ if (process.env.NODE_ENV === "developement") app.use(morgan("dev"));
 //use the routes
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/auth/", authRoute);
+
+// Use the Error Handler
+app.use(errorHandler);
 
 // setting up port
 const PORT = process.env.PORT || 5000;
