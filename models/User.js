@@ -41,6 +41,9 @@ const UserSchema = new mongoose.Schema({
     enum: ["costumer", "tailor"],
     default: "costumer",
   },
+  /*  avatar: {
+    type: String,
+  }, */
   follower: [String],
   following: [String],
 
