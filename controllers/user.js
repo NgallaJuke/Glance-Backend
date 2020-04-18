@@ -2,18 +2,15 @@ const User = require("../models/User");
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 
-// @desc    Get All Users
-// @route   GET /api/v1/auth/users
-// @access  Private/admin
-exports.getUsers = asyncHandler(async (req, res) => {
-  res.status(200).json({ success: true, msg: "HOME PAGE" });
-});
-
 // @desc    Get A User
 // @route   GET /api/v1/auth/users/:id
-// @access  Private/admin
-exports.getSingleUser = asyncHandler(async (req, res) => {
-  res.status(200).json({ success: true, msg: req.params.id });
+// @access  Public
+exports.GetSingleUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) {
+    return next(new ErrorResponse("User not found", 404));
+  }
+  res.status(200).json({ success: true, user });
 });
 
 // @desc    Follow a User
@@ -86,4 +83,19 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
     }
   );
   res.status(200).json({ success: true, unfollowed, user });
+});
+
+// @desc    Update a User
+// @route   PUT /api/v1/auth/users/update
+// @access  Private
+exports.UpdateUser = asyncHandler(async (req, res) => {
+  let user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new ErrorResponse("Access not authorize", 401));
+  }
+  user = await User.findByIdAndUpdate(req.user.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+  res.status(200).json({ success: true, user });
 });
