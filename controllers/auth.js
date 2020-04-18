@@ -50,8 +50,6 @@ exports.Login = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);
-  console.log("User=>", user);
-
   res.status(200).json({ success: true, data: user });
 });
 

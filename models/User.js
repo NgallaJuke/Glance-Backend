@@ -41,12 +41,17 @@ const UserSchema = new mongoose.Schema({
     enum: ["costumer", "tailor"],
     default: "costumer",
   },
-  following: { type: String },
+  follower: [String],
+  following: [String],
+
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
   },
 });
 /* ----------------NOTE------------------- */

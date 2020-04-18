@@ -15,8 +15,8 @@ const DBconnect = require("./config/db.js");
 DBconnect();
 
 //Get the Routes
-const userRoute = require("./routes/user");
 const authRoute = require("./routes/auth");
+const userRoute = require("./routes/user");
 
 //body parser
 app.use(bodyParser.json());
@@ -29,8 +29,8 @@ app.use(cookie_parser());
 if (process.env.NODE_ENV === "developement") app.use(morgan("dev"));
 
 //use the routes
-app.use("/api/v1/user", userRoute);
 app.use("/api/v1/auth/", authRoute);
+app.use("/api/v1/user/", userRoute);
 
 // Use the Error Handler
 app.use(errorHandler);
