@@ -55,6 +55,23 @@ exports.Login = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);
+  if (!user) return next(new ErrorResponse("User not found", 404));
+
+  // get resset token
+  res.status(200).json({ success: true, data: user });
+});
+
+// @desc    Forgot Password
+// @route   GET /api/v1/auth/forget-password
+// @access  Private
+exports.ForgetPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user)
+    return next(new ErrorResponse("No user with that email found", 404));
+  const resetToken = user.getResetPasswordToken();
+  console.log("resetToken", resetToken);
+  await user.save({ validateBeforeSave: false });
+
   res.status(200).json({ success: true, data: user });
 });
 
