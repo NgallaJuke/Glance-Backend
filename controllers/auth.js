@@ -3,6 +3,7 @@ const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const sendEmail = require("../utils/sendEmail");
+const crypto = require("crypto");
 
 // @desc    Register User
 // @route   POST /api/v1/auth/register
@@ -77,9 +78,9 @@ exports.ForgetPassword = asyncHandler(async (req, res, next) => {
   // create reset URL
   const resetURL = `${req.protocol}://${req.get(
     "host"
-  )}/api/v1/forget-password/${resetToken}`;
+  )}/api/v1/auth/forget-password/${resetToken}`;
 
-  const message = `You are receiving tjis email because you (or someone else) has requested to reset of a password. Please make a PUT request to: \n\n ${resetURL}`;
+  const message = `You are receiving this email because you (or someone else) has requested to reset of a password. Please make a PUT request to: \n\n ${resetURL}`;
   try {
     await sendEmail({
       email: user.email,
@@ -95,6 +96,36 @@ exports.ForgetPassword = asyncHandler(async (req, res, next) => {
     next(new ErrorResponse("Email couldn't be sent ", 500));
   }
 });
+
+// @desc    Reset Password
+// @route   PUT /api/v1/auth/forget-password/:resetToken
+// @access  Public
+exports.ResetPassword = asyncHandler(async (req, res, next) => {
+  // get hashed token
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.resetToken)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  if (!user) return next(new ErrorResponse("Invalid", 400));
+
+  // Set new password
+  user.password = req.body.password;
+
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  // save the user
+  await user.save();
+
+  SendTokentoCookieResponse(user, 200, res);
+});
+
+/* ------------------------------------------------------ */
 
 // fonction to create the token send it via cookie to the Headers
 const SendTokentoCookieResponse = async (user, status, res) => {
