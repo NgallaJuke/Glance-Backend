@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
+const fs = require("fs");
 
 // @desc    Register User
 // @route   POST /api/v1/auth/register
@@ -10,6 +11,9 @@ exports.Register = asyncHandler(async (req, res) => {
   // get this variable from the req.body = form registration
   const { email, firstName, lastName, userName, role, password } = req.body;
 
+  // let avatar = {};
+  // avatar.data = fs.readFileSync("./public/avatars/default.png");
+  // avatar.contentType = "image.png";
   // create user
   const user = await User.create({
     email,
@@ -17,6 +21,7 @@ exports.Register = asyncHandler(async (req, res) => {
     lastName,
     userName,
     role,
+    // avatar,
     password,
   });
 

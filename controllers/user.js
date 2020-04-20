@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
-
+const path = require("path");
 // @desc    Get A User
 // @route   GET /api/v1/auth/users/:id
 // @access  Public
@@ -88,14 +88,68 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
 // @desc    Update a User
 // @route   PUT /api/v1/auth/users/update
 // @access  Private
-exports.UpdateUser = asyncHandler(async (req, res) => {
+exports.UpdateUser = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);
   if (!user) {
     return next(new ErrorResponse("Access not authorize", 401));
   }
+  user.updatedAt = Date.now;
   user = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
     runValidators: true,
   });
+  res.status(200).json({ success: true, user });
+});
+
+// @desc    User Change Profile Picture
+// @route   PUT /api/v1/auth/users/update-avatar
+// @access  Private
+exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
+  let user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new ErrorResponse("Access not authorize", 401));
+  }
+  if (!req.files) {
+    return next(new ErrorResponse("Please add a photo", 400));
+  }
+
+  const file = req.files.file;
+
+  // make sure the file is an image
+  if (!file.mimetype.startsWith("image"))
+    return next(new ErrorResponse("Please upload an image file", 403));
+  // make sure the image is not an gif
+  if (file.mimetype === "image/gif")
+    return next(new ErrorResponse("Gif image are not allow", 403));
+
+  // check file size
+  if (file.size > process.env.MAX_PIC_SIZE)
+    return next(
+      new ErrorResponse(
+        `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
+        400
+      )
+    );
+
+  // Create costunme file name
+  file.name = `avatar_${Date.now()}${path.parse(file.name).ext}`;
+
+  // move the file
+  file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
+    if (err) {
+      return next(new ErrorResponse("Probleme while uploading the file", 500));
+    }
+
+    // insert the filemane in the database
+    user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatar: path.join(__dirname + `../../public/avatars/${file.name}`) },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+  });
+
   res.status(200).json({ success: true, user });
 });

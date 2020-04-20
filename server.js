@@ -1,8 +1,10 @@
+const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
 const errorHandler = require("./middleware/error");
 const color = require("colors");
+const fileupload = require("express-fileupload");
 const app = express();
 const bodyParser = require("body-parser");
 const cookie_parser = require("cookie-parser");
@@ -27,6 +29,12 @@ app.use(cookie_parser());
 
 //User Morgan for dev logger
 if (process.env.NODE_ENV === "developement") app.use(morgan("dev"));
+
+// file Uploader
+app.use(fileupload());
+
+// STATIC folder for the file
+app.use(express.static(path.join(__dirname, "public")));
 
 //use the routes
 app.use("/api/v1/auth/", authRoute);

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const path = require("path");
 
 const UserSchema = new mongoose.Schema({
   email: {
@@ -41,9 +42,10 @@ const UserSchema = new mongoose.Schema({
     enum: ["costumer", "tailor"],
     default: "costumer",
   },
-  /*  avatar: {
+  avatar: {
     type: String,
-  }, */
+    default: path.join(__dirname + "../../public/avatars/default.png"),
+  },
   follower: [String],
   following: [String],
 
