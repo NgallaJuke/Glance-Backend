@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
-const fs = require("fs");
+const sendEmail = require("../utils/sendEmail");
 
 // @desc    Register User
 // @route   POST /api/v1/auth/register
@@ -68,11 +68,32 @@ exports.ForgetPassword = asyncHandler(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user)
     return next(new ErrorResponse("No user with that email found", 404));
+
+  // get the reset token
   const resetToken = user.getResetPasswordToken();
-  console.log("resetToken", resetToken);
+
   await user.save({ validateBeforeSave: false });
 
-  res.status(200).json({ success: true, data: user });
+  // create reset URL
+  const resetURL = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/forget-password/${resetToken}`;
+
+  const message = `You are receiving tjis email because you (or someone else) has requested to reset of a password. Please make a PUT request to: \n\n ${resetURL}`;
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Password rest Token",
+      message,
+    });
+    res.status(200).json({ success: true, data: "Email sent" });
+  } catch (error) {
+    console.log(error);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    next(new ErrorResponse("Email couldn't be sent ", 500));
+  }
 });
 
 // fonction to create the token send it via cookie to the Headers
