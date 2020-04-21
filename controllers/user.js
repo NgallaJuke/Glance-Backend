@@ -2,6 +2,7 @@ const User = require("../models/User");
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
+
 // @desc    Get A User
 // @route   GET /api/v1/auth/users/:id
 // @access  Public

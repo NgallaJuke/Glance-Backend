@@ -19,6 +19,7 @@ DBconnect();
 //Get the Routes
 const authRoute = require("./routes/auth");
 const userRoute = require("./routes/user");
+const postRoute = require("./routes/post");
 
 //body parser
 app.use(bodyParser.json());
@@ -39,6 +40,7 @@ app.use(express.static(path.join(__dirname, "public")));
 //use the routes
 app.use("/api/v1/auth/", authRoute);
 app.use("/api/v1/user/", userRoute);
+app.use("/api/v1/post/", postRoute);
 
 // Use the Error Handler
 app.use(errorHandler);
