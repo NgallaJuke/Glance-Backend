@@ -6,7 +6,7 @@ const path = require("path");
 // @desc    Get A User
 // @route   GET /api/v1/auth/users/:id
 // @access  Public
-exports.GetSingleUser = asyncHandler(async (req, res) => {
+exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.params.id);
   if (!user) {
     return next(new ErrorResponse("User not found", 404));

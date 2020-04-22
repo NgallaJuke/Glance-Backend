@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const path = require("path");
 
 const PostSchema = new mongoose.Schema({
   img_url: [String],
@@ -8,7 +7,8 @@ const PostSchema = new mongoose.Schema({
     maxlength: 180,
   },
   likes: {
-    type: Number,
+    count: { type: Number, default: 0 },
+    liker: [String],
   },
   createdAt: {
     type: Date,
