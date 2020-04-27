@@ -3,6 +3,13 @@ const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
 
+// @desc    Get All Users
+// @route   GET /api/v1/auth/users
+// @access  Private
+exports.getAllUsers = asyncHandler(async (req, res, next) => {
+  res.status(200).json(res.advancedResults);
+});
+
 // @desc    Get A User
 // @route   GET /api/v1/auth/users/:id
 // @access  Public

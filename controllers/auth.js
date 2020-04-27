@@ -29,6 +29,14 @@ exports.Register = asyncHandler(async (req, res) => {
   SendTokentoCookieResponse(user, 200, res);
 });
 
+// @desc    Delete User Account
+// @route   DELETE /api/v1/auth/users/delete
+// @access  Private
+exports.deleteUser = asyncHandler(async (req, res, next) => {
+  const user = await User.findByIdAndDelete(req.user.id);
+  res.status(200).json({ success: true, data: {} });
+});
+
 // @desc    Login User
 // @route   POST /api/v1/auth/login
 // @access  Public

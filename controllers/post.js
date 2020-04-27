@@ -22,9 +22,9 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     if (!file.mimetype.startsWith("image")) {
       error = new ErrorResponse("Please upload an image file", 403);
       return next(error);
-    } // make sure the image is not an gif
+    } // make sure the image is not a gif
     if (file.mimetype === "image/gif") {
-      error = new ErrorResponse("Gif image are not allow", 403);
+      error = new ErrorResponse("Gif image is not allow", 403);
       return next(error);
     }
     // check file size
