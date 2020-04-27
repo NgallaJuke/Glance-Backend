@@ -4,6 +4,13 @@ const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
 
+// @desc    Get All Posts
+// @route   GET /api/v1/auth/post
+// @access  Public
+exports.getAllPosts = asyncHandler(async (req, res, next) => {
+  res.status(200).json(res.advancedResults);
+});
+
 // @desc    Create a Post
 // @route   GET /api/v1/post/create-post
 // @access  Private
