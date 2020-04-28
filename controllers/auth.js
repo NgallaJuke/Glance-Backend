@@ -22,9 +22,58 @@ exports.Register = asyncHandler(async (req, res) => {
     lastName,
     userName,
     role,
-    // avatar,
     password,
   });
+
+  if (!user)
+    return next(
+      new ErrorResponse("Internal Error while creating the user", 500)
+    );
+
+  const fakeToken = user.getRegisterToken();
+  await user.save({ validateBeforeSave: false });
+  // create reset URL
+  const resetURL = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/auth/confirm-register/${fakeToken}`;
+
+  const message = `PLease confirm you registration by making a PUT request to this URL.\n\n ${resetURL}`;
+  try {
+    await sendEmail({
+      email: email,
+      subject: "Confirm Registration",
+      message,
+    });
+    res.status(200).json({ success: true, data: "Email sent", user });
+  } catch (error) {
+    console.log(error);
+    next(new ErrorResponse("Email couldn't be sent ", 500));
+  }
+
+  // SendTokentoCookieResponse(user, 200, res);
+});
+
+// @desc    Confirm User Registration
+// @route   POST /api/v1/auth/confirm-register/:fakeToken
+// @access  Public
+exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
+  // get hashed token
+  const RegisterToken = crypto
+    .createHash("sha256")
+    .update(req.params.fakeToken)
+    .digest("hex");
+
+  const user = await User.findOne({
+    RegisterToken,
+    confirmRegisterExpire: { $gt: Date.now() },
+  });
+  if (!user) return next(new ErrorResponse("Invalid", 400));
+
+  user.RegisterToken = undefined;
+  user.confirmRegisterExpire = undefined;
+
+  // save the user
+  await user.save();
 
   SendTokentoCookieResponse(user, 200, res);
 });
@@ -88,7 +137,7 @@ exports.ForgetPassword = asyncHandler(async (req, res, next) => {
     "host"
   )}/api/v1/auth/forget-password/${resetToken}`;
 
-  const message = `You are receiving this email because you (or someone else) has requested to reset of a password. Please make a PUT request to: \n\n ${resetURL}`;
+  const message = `You are receiving this email because you (or someone else) has requested to reset off a password.\n Please make a PUT request to: \n\n ${resetURL}`;
   try {
     await sendEmail({
       email: user.email,

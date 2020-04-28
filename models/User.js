@@ -52,6 +52,8 @@ const UserSchema = new mongoose.Schema({
 
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  RegisterToken: String,
+  confirmRegisterExpire: Date,
   createdAt: {
     type: Date,
     default: Date.now,
@@ -94,7 +96,7 @@ UserSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Generate ans hash password Token
+// Generate and hash password Token
 UserSchema.methods.getResetPasswordToken = function () {
   // generate Token
   const resetToken = crypto.randomBytes(20).toString("hex");
@@ -108,6 +110,22 @@ UserSchema.methods.getResetPasswordToken = function () {
   // set expire
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
   return resetToken;
+};
+
+// Generate and hash register Token
+UserSchema.methods.getRegisterToken = function () {
+  // generate Token
+  const fakeToken = crypto.randomBytes(20).toString("hex");
+
+  // hash the token and set to RegisterToken field
+  this.RegisterToken = crypto
+    .createHash("sha256")
+    .update(fakeToken)
+    .digest("hex");
+
+  // set expire
+  this.confirmRegisterExpire = Date.now() + 10 * 60 * 1000;
+  return fakeToken;
 };
 
 module.exports = mongoose.model("User", UserSchema);

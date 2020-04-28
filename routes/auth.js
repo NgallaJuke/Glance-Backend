@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const {
   Register,
+  ConfirmRegister,
   deleteUser,
   Login,
   CurrentUser,
@@ -9,6 +10,7 @@ const {
 } = require("../controllers/auth");
 const { Protect } = require("../middleware/auth");
 router.route("/register").post(Register);
+router.route("/confirm-register/:fakeToken").put(ConfirmRegister);
 router.route("/delete").delete(deleteUser);
 router.route("/login").post(Login);
 router.route("/current-user").get(Protect, CurrentUser);
