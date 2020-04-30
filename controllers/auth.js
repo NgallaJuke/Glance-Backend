@@ -12,10 +12,6 @@ exports.Register = asyncHandler(async (req, res) => {
   // get this variable from the req.body = form registration
   const { email, firstName, lastName, userName, role, password } = req.body;
 
-  // let avatar = {};
-  // avatar.data = fs.readFileSync("./public/avatars/default.png");
-  // avatar.contentType = "image.png";
-  // create user
   const user = await User.create({
     email,
     firstName,
@@ -30,9 +26,9 @@ exports.Register = asyncHandler(async (req, res) => {
       new ErrorResponse("Internal Error while creating the user", 500)
     );
 
+  // create the mail : message and the url to redirect the user
   const fakeToken = user.getRegisterToken();
   await user.save({ validateBeforeSave: false });
-  // create reset URL
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/api/v1/auth/confirm-register/${fakeToken}`;

@@ -6,6 +6,7 @@ const PostSchema = new mongoose.Schema({
     type: String,
     maxlength: 180,
   },
+  tags: [String],
   likes: {
     count: { type: Number, default: 0 },
     liker: [String],

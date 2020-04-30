@@ -4,13 +4,6 @@ const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
 
-// @desc    Get All Posts
-// @route   GET /api/v1/auth/post
-// @access  Public
-exports.getAllPosts = asyncHandler(async (req, res, next) => {
-  res.status(200).json(res.advancedResults);
-});
-
 // @desc    Create a Post
 // @route   GET /api/v1/post/create-post
 // @access  Private
@@ -18,13 +11,13 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
   let img_url = [];
   let files = [];
   let error = "";
-
+  let count = 0;
   if (!req.files) {
     return next(new ErrorResponse("Please add a photo", 400));
   }
 
+  // save the files image
   Array.from(req.files.img_url).forEach((file) => {
-    let count = 0;
     // make sure the file is an image
     if (!file.mimetype.startsWith("image")) {
       error = new ErrorResponse("Please upload an image file", 403);
@@ -50,26 +43,44 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     // move the file
     files.push(file);
   });
-  if (!error) {
-    files.forEach((file) => {
-      file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
-        if (err) {
-          return next(
-            new ErrorResponse("Problem while uploading the file", 500)
-          );
-        }
-      });
-    });
+  if (error) return console.log("Error :", error);
 
-    const post = await Post.create({
-      img_url,
-      description: req.body.description,
-      user: req.user.id,
+  //move all the files to publis folder
+  files.forEach((file) => {
+    file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
+      if (err) {
+        return next(
+          new ErrorResponse(
+            `Problem while uploading the file ${file.name}`,
+            500
+          )
+        );
+      }
     });
-    res.status(200).json({ success: true, post: post });
-  } else {
-    console.log("Error :", error);
+  });
+
+  // check if the description has any #(tags) in it
+
+  const reg = /#\S+/g;
+  let tags = [];
+  if (req.body.description.match(reg)) {
+    tags = req.body.description.match(reg);
   }
+
+  const post = await Post.create({
+    img_url,
+    description: req.body.description,
+    tags,
+    user: req.user.id,
+  });
+  res.status(200).json({ success: true, post: post });
+});
+
+// @desc    Get All Posts
+// @route   GET /api/v1/auth/post
+// @access  Public
+exports.getAllPosts = asyncHandler(async (req, res, next) => {
+  res.status(200).json(res.advancedResults);
 });
 
 // @desc    Get A Post
