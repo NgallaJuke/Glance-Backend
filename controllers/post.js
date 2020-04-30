@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 const Post = require("../models/Post");
+const User = require("../models/User");
+const Comment = require("../models/Comment");
+const ObjectId = require("mongoose").Types.ObjectId;
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
@@ -135,6 +138,21 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, post });
 });
 
+// @desc    Get The User Connected Posts
+// @route   GET /api/v1/post/:userName
+// @access  Public
+exports.GetPostByUser = asyncHandler(async (req, res, next) => {
+  const user = await User.find({ userName: req.params.userName });
+  console.log("User", user);
+  console.log("UserID", user[0]._id);
+
+  if (!user) return next(new ErrorResponse("User not found", 404));
+  const post = await Post.find({ user: user[0]._id });
+  if (!post) return next(new ErrorResponse("Post not found", 404));
+
+  res.status(200).json({ success: true, post });
+});
+
 // // @desc    Like a Post
 // // @route   PUT /api/v1/post/:id/like
 // // @access  Private
@@ -166,4 +184,27 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   post.save();
 
   res.status(200).json({ success: true, post });
+});
+
+// // @desc    Comment a Post
+// // @route   PUT /api/v1/post/:id/comment
+// // @access  Private
+exports.CommentPost = asyncHandler(async (req, res, next) => {
+  // get the post that the connected user comment on
+  const post = await Post.findById(req.params.id);
+  if (!post) return next(new ErrorResponse("Post not found", 404));
+
+  // check if the description has any #(tags) in it
+  const reg = /#\S+/g;
+  let tags = [];
+  if (req.body.message.match(reg)) {
+    tags = req.body.message.match(reg);
+  }
+
+  const comment = await Comment.create({
+    message: req.body.message,
+    tags,
+    user: req.user.id,
+    post: req.params.id,
+  });
 });
