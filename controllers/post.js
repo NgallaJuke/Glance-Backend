@@ -7,7 +7,7 @@ const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
 
-// @desc    Create a Post
+// @desc    Create A Post
 // @route   GET /api/v1/post/create-post
 // @access  Private
 exports.CreatePost = asyncHandler(async (req, res, next) => {
@@ -142,16 +142,16 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/post/:userName
 // @access  Public
 exports.GetPostByUser = asyncHandler(async (req, res, next) => {
-  const user = await User.find({ userName: req.params.userName });
+  const user = await User.findOne({ userName: req.params.userName });
 
   if (!user) return next(new ErrorResponse("User not found", 404));
-  const post = await Post.find({ user: user[0]._id });
+  const post = await Post.find({ user: user.id });
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   res.status(200).json({ success: true, post });
 });
 
-// // @desc    Like a Post
+// // @desc    Like A Post
 // // @route   PUT /api/v1/post/:id/like
 // // @access  Private
 exports.LikePost = asyncHandler(async (req, res, next) => {
@@ -168,7 +168,7 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, post });
 });
 
-// // @desc    UnLike a Post
+// // @desc    UnLike A Post
 // // @route   PUT /api/v1/post/:id/unlike
 // // @access  Private
 exports.UnlikePost = asyncHandler(async (req, res, next) => {
@@ -184,7 +184,7 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, post });
 });
 
-// // @desc    Comment a Post
+// // @desc    Comment A Post
 // // @route   PUT /api/v1/post/:id/comment
 // // @access  Private
 exports.CommentPost = asyncHandler(async (req, res, next) => {
@@ -205,7 +205,49 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
     user: req.user.id,
     post: req.params.id,
   });
+  if (!comment)
+    return next(new ErrorResponse("Error while creating the comment", 500));
 
   post.comment.push(comment.id);
-  res.status(200).json({ success: true, comment, post });
+  post.save();
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new ErrorResponse("User Not Found", 404));
+  user.comment.push(comment.id);
+  user.save();
+  res.status(200).json({ success: true, comment, post, user });
+});
+
+// // @desc    Like A Comment
+// // @route   PUT /api/v1/post/comment/:id/like
+// // @access  Private
+exports.LikeComment = asyncHandler(async (req, res, next) => {
+  let comment = await Comment.findById(req.params.id);
+
+  if (!comment) return next(new ErrorResponse("Post not found", 404));
+
+  if (
+    !comment.likes.liker.filter((liker) => liker === req.user.id).length > 0
+  ) {
+    comment.likes.liker.push(req.user.id);
+    comment.likes.count++;
+  }
+  comment.save();
+
+  res.status(200).json({ success: true, comment });
+});
+
+// // @desc    UnLike A Comment
+// // @route   PUT /api/v1/post/comment/:id/unlike
+// // @access  Private
+exports.UnlikeComment = asyncHandler(async (req, res, next) => {
+  let comment = await Comment.findById(req.params.id);
+  if (!comment) return next(new ErrorResponse("Comment not found", 404));
+
+  if (comment.likes.liker.filter((liker) => liker === req.user.id).length > 0) {
+    comment.likes.liker.pull(req.user.id);
+    comment.likes.count--;
+  }
+  comment.save();
+
+  res.status(200).json({ success: true, comment });
 });

@@ -47,8 +47,36 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: path.join(__dirname + "../../public/avatars/default.png"),
   },
-  follower: [String],
-  following: [String],
+  follower: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    },
+  ],
+  following: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    },
+  ],
+  comment: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "Comment",
+    },
+  ],
+  blocked: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    },
+  ],
+  blockedBy: [
+    {
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+    },
+  ],
 
   resetPasswordToken: String,
   resetPasswordExpire: Date,
