@@ -18,6 +18,6 @@ router.route("/create-post").post(Protect, CreatePost);
 router.route("/:id").get(GetSinglePost);
 router.route("/:id/like").put(Protect, LikePost);
 router.route("/:id/unlike").put(Protect, UnlikePost);
-router.route("/:id/comment").put(Protect, CommentPost);
+router.route("/:id/comment").post(Protect, CommentPost);
 
 module.exports = router;

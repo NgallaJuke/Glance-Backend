@@ -143,8 +143,6 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.GetPostByUser = asyncHandler(async (req, res, next) => {
   const user = await User.find({ userName: req.params.userName });
-  console.log("User", user);
-  console.log("UserID", user[0]._id);
 
   if (!user) return next(new ErrorResponse("User not found", 404));
   const post = await Post.find({ user: user[0]._id });
@@ -207,4 +205,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
     user: req.user.id,
     post: req.params.id,
   });
+
+  post.comment.push(comment.id);
+  res.status(200).json({ success: true, comment, post });
 });
