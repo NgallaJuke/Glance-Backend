@@ -12,12 +12,12 @@ const {
   UnlikeComment,
   SavePost,
 } = require("../controllers/post");
-const { Protect } = require("../middleware/auth");
+const { Protect, Authorize } = require("../middleware/auth");
 const advancedResults = require("../middleware/advancedResults");
 
 router.route("/").get(advancedResults(Post), getAllPosts);
 router.route("/:userName").get(advancedResults(Post), GetPostByUser);
-router.route("/create-post").post(Protect, CreatePost);
+router.route("/create-post").post(Protect, Authorize("tailor"), CreatePost);
 router.route("/:id").get(GetSinglePost);
 router.route("/like").put(Protect, LikePost);
 router.route("/unlike").put(Protect, UnlikePost);

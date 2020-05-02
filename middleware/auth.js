@@ -28,14 +28,15 @@ exports.Protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-exports.Authorize = () => {
-  return (req, res, next) => {
-    if (req.user.role === "costumer")
-      return next(
-        new ErrorResponse(
-          "Costumers are not authorise to access this route",
-          401
-        )
-      );
-  };
+// Grant access to specific roles
+exports.Authorize = (...roles) => (req, res, next) => {
+  if (!roles.includes(req.user.role)) {
+    return next(
+      new ErrorResponse(
+        `User's role (${req.user.role}) is not authorized to access this route.`,
+        403
+      )
+    );
+  }
+  return next();
 };
