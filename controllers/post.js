@@ -26,9 +26,15 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     if (!file.mimetype.startsWith("image")) {
       error = new ErrorResponse("Please upload an image file", 403);
       return next(error);
-    } // make sure the image is not a gif
+    }
+    // make sure the image is not a gif
     if (file.mimetype === "image/gif") {
       error = new ErrorResponse("Gif image is not allow", 403);
+      return next(error);
+    }
+    // make sure the image is not a png
+    if (file.mimetype === "image/png") {
+      error = new ErrorResponse("PNG image is not allow", 403);
       return next(error);
     }
     // check file size
@@ -62,9 +68,15 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (!file.mimetype.startsWith("image")) {
         error = new ErrorResponse("Please upload an image file", 403);
         return next(error);
-      } // make sure the image is not a gif
+      }
+      // make sure the image is not a gif
       if (file.mimetype === "image/gif") {
         error = new ErrorResponse("Gif image is not allow", 403);
+        return next(error);
+      }
+      // make sure the image is not a png
+      if (file.mimetype === "image/png") {
+        error = new ErrorResponse("PNG image is not allow", 403);
         return next(error);
       }
       // check file size
@@ -152,44 +164,53 @@ exports.GetPostByUser = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Like A Post
-// // @route   PUT /api/v1/post/:id/like
+// // @route   PUT /api/v1/post/like
 // // @access  Private
 exports.LikePost = asyncHandler(async (req, res, next) => {
-  let post = await Post.findById(req.params.id);
+  let post = await Post.findById(req.body.id);
 
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
-  if (!post.likes.liker.filter((liker) => liker === req.user.id).length > 0) {
-    post.likes.liker.push(req.user.id);
-    post.likes.count++;
-  }
+  if (
+    post.likes.liker.filter((liker) => liker.toString() === req.user.id)
+      .length > 0
+  )
+    return next(new ErrorResponse("Post already liked.", 403));
+
+  post.likes.liker.push(req.user.id);
+  post.likes.count++;
+
   post.save();
 
   res.status(200).json({ success: true, post });
 });
 
 // // @desc    UnLike A Post
-// // @route   PUT /api/v1/post/:id/unlike
+// // @route   PUT /api/v1/post/unlike
 // // @access  Private
 exports.UnlikePost = asyncHandler(async (req, res, next) => {
-  let post = await Post.findById(req.params.id);
+  let post = await Post.findById(req.body.id);
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
-  if (post.likes.liker.filter((liker) => liker === req.user.id).length > 0) {
-    post.likes.liker.pull(req.user.id);
-    post.likes.count--;
-  }
+  if (
+    !post.likes.liker.filter((liker) => liker.toString() === req.user.id)
+      .length > 0
+  )
+    return next(new ErrorResponse("Post not liked.", 403));
+  post.likes.liker.pull(req.user.id);
+  post.likes.count--;
+
   post.save();
 
   res.status(200).json({ success: true, post });
 });
 
 // // @desc    Comment A Post
-// // @route   PUT /api/v1/post/:id/comment
+// // @route   PUT /api/v1/post/comment
 // // @access  Private
 exports.CommentPost = asyncHandler(async (req, res, next) => {
   // get the post that the connected user comment on
-  const post = await Post.findById(req.params.id);
+  const post = await Post.findById(req.body.id);
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   // check if the description has any #(tags) in it
@@ -203,7 +224,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
     message: req.body.message,
     tags,
     user: req.user.id,
-    post: req.params.id,
+    post: req.body.id,
   });
   if (!comment)
     return next(new ErrorResponse("Error while creating the comment", 500));
@@ -218,15 +239,16 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Like A Comment
-// // @route   PUT /api/v1/post/comment/:id/like
+// // @route   PUT /api/v1/post/comment/like
 // // @access  Private
 exports.LikeComment = asyncHandler(async (req, res, next) => {
-  let comment = await Comment.findById(req.params.id);
+  let comment = await Comment.findById(req.body.id);
 
   if (!comment) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    !comment.likes.liker.filter((liker) => liker === req.user.id).length > 0
+    !comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
+      .length > 0
   ) {
     comment.likes.liker.push(req.user.id);
     comment.likes.count++;
@@ -237,17 +259,37 @@ exports.LikeComment = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    UnLike A Comment
-// // @route   PUT /api/v1/post/comment/:id/unlike
+// // @route   PUT /api/v1/post/comment/unlike
 // // @access  Private
 exports.UnlikeComment = asyncHandler(async (req, res, next) => {
-  let comment = await Comment.findById(req.params.id);
+  let comment = await Comment.findById(req.body.id);
   if (!comment) return next(new ErrorResponse("Comment not found", 404));
 
-  if (comment.likes.liker.filter((liker) => liker === req.user.id).length > 0) {
+  if (
+    comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
+      .length > 0
+  ) {
     comment.likes.liker.pull(req.user.id);
     comment.likes.count--;
   }
   comment.save();
 
   res.status(200).json({ success: true, comment });
+});
+
+// // @desc    Save A Post
+// // @route   PUT /api/v1/post/save
+// // @access  Private
+exports.SavePost = asyncHandler(async (req, res, next) => {
+  let post = await Post.findById(req.body.id);
+  if (!post) return next(new ErrorResponse("Post not found.", 404));
+  let user = await User.findById(req.user.id);
+  if (!user) return next(new ErrorResponse("User not found.", 404));
+
+  if (user.save.filter((save) => save.toString() === req.user.id).length > 0)
+    return next(new ErrorResponse("Post already saved.", 403));
+
+  user.save.push(post.id);
+  user.save();
+  res.status(200).json({ success: true, post });
 });

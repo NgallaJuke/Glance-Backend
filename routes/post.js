@@ -10,6 +10,7 @@ const {
   CommentPost,
   LikeComment,
   UnlikeComment,
+  SavePost,
 } = require("../controllers/post");
 const { Protect } = require("../middleware/auth");
 const advancedResults = require("../middleware/advancedResults");
@@ -18,10 +19,11 @@ router.route("/").get(advancedResults(Post), getAllPosts);
 router.route("/:userName").get(advancedResults(Post), GetPostByUser);
 router.route("/create-post").post(Protect, CreatePost);
 router.route("/:id").get(GetSinglePost);
-router.route("/:id/like").put(Protect, LikePost);
-router.route("/:id/unlike").put(Protect, UnlikePost);
-router.route("/:id/comment").post(Protect, CommentPost);
-router.route("/comment/:id/like").put(Protect, LikeComment);
-router.route("/comment/:id/unlike").put(Protect, UnlikeComment);
+router.route("/like").put(Protect, LikePost);
+router.route("/unlike").put(Protect, UnlikePost);
+router.route("/comment").post(Protect, CommentPost);
+router.route("/comment/like").put(Protect, LikeComment);
+router.route("/comment/unlike").put(Protect, UnlikeComment);
+router.route("/save").put(Protect, SavePost);
 
 module.exports = router;
