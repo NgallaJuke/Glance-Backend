@@ -8,8 +8,8 @@ const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
 
 // @desc    Create A Post
-// @route   GET /api/v1/post/create-post
-// @access  Private
+// @route   GET /api/v1/post/create
+// @access  Private/Tailors
 exports.CreatePost = asyncHandler(async (req, res, next) => {
   let img_url = [];
   let files = [];
@@ -132,6 +132,20 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, post: post });
 });
 
+// @desc    Delete A Post
+// @route   DELETE /api/v1/post/delete
+// @access  Private/Tailors
+exports.DeletePost = asyncHandler(async (req, res, next) => {
+  const post = await Post.findOne({ user: req.user.id });
+  if (!post)
+    return next(
+      new ErrorResponse("User not authorize to make this request", 403)
+    );
+  post.deleteOne();
+
+  res.status(200).json({ success: true, post: "the Post has been deleted." });
+});
+
 // @desc    Get All Posts
 // @route   GET /api/v1/auth/post
 // @access  Public
@@ -144,9 +158,7 @@ exports.getAllPosts = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.GetSinglePost = asyncHandler(async (req, res, next) => {
   const post = await Post.findById(req.params.id);
-  if (!post) {
-    return next(new ErrorResponse("Post not found", 404));
-  }
+  if (!post) return next(new ErrorResponse("Post not found", 404));
   res.status(200).json({ success: true, post });
 });
 
@@ -286,10 +298,26 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 404));
 
-  if (user.save.filter((save) => save.toString() === req.user.id).length > 0)
+  if (user.saved.filter((saved) => saved.toString() === req.user.id).length > 0)
     return next(new ErrorResponse("Post already saved.", 403));
 
-  user.save.push(post.id);
+  user.saved.push(post.id);
   user.save();
   res.status(200).json({ success: true, post });
+});
+
+// // @desc    Delete A Saved Post
+// // @route   DELETE /api/v1/post/save/delete
+// // @access  Private/Tailor
+exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new ErrorResponse("User not found.", 404));
+  if (!user.saved.includes(req.body.id))
+    return next(new ErrorResponse("This post has not been saved.", 404));
+
+  user.saved.pull(req.body.id);
+  user.save();
+  res
+    .status(200)
+    .json({ success: true, post: "The saved post has been deleted." });
 });
