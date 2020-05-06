@@ -18,17 +18,20 @@ const UserSchema = new mongoose.Schema({
     type: String,
     maxlength: 30,
     required: [true, "Please add your firstname"],
+    match: [/^[a-zA-Z]+([ ]?[a-zA-Z])*$/, "First ame Unvalid"],
   },
   lastName: {
     type: String,
     maxlength: 30,
     required: [true, "Please add your lastName"],
+    match: [/^[a-zA-Z]*$/, "Last ame Unvalid"],
   },
   userName: {
     type: String,
     maxlength: 30,
     unique: [true, "this username is already exist"],
     required: [true, "Please add your userName"],
+    match: [/^(?!.*\.\.)(?!.*\.$)[^\W][\w.]{0,29}$/gim, "User Name Unvalide"],
   },
   password: {
     type: String,
@@ -41,7 +44,6 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please choose a user type"],
     enum: ["costumer", "tailor"],
-    default: "costumer",
   },
   avatar: {
     type: String,

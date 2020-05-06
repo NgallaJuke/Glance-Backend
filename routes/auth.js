@@ -4,6 +4,7 @@ const {
   ConfirmRegister,
   deleteUser,
   Login,
+  Logout,
   CurrentUser,
   ForgetPassword,
   ResetPassword,
@@ -13,6 +14,7 @@ router.route("/register").post(Register);
 router.route("/confirm-register/:fakeToken").put(ConfirmRegister);
 router.route("/delete").delete(deleteUser);
 router.route("/login").post(Login);
+router.route("/logout").post(Logout);
 router.route("/current-user").get(Protect, CurrentUser);
 router.route("/forget-password").post(ForgetPassword);
 router.route("/forget-password/:resetToken").put(ResetPassword);

@@ -104,6 +104,17 @@ exports.Login = asyncHandler(async (req, res, next) => {
   SendTokentoCookieResponse(user, 200, res);
 });
 
+// @desc    LogoutUser
+// @route   POST /api/v1/auth/logout
+// @access  Private
+exports.Logout = asyncHandler(async (req, res, next) => {
+  //find the user with that email
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new ErrorResponse("User not found.", 401));
+
+  SendTokentoCookieResponse(user, 200, res);
+});
+
 // @desc    Get Current Logged User
 // @route   GET /api/v1/auth/current-user
 // @access  Private

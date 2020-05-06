@@ -139,7 +139,7 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
   const post = await Post.findOne({ user: req.user.id });
   if (!post)
     return next(
-      new ErrorResponse("User not authorize to make this request", 403)
+      new ErrorResponse("User not authorize to make this request", 401)
     );
   post.deleteOne();
 
