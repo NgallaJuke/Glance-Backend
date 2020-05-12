@@ -126,18 +126,6 @@ UserSchema.pre("save", async function (next) {
 
 // Sign JWT an return
 UserSchema.methods.getSignedJWTtoken = function () {
-  // return the Token we create from the secret code and times' expiration
-  // return jwt.sign(
-  //   {
-  //     id: this._id,
-  //   },
-  //   process.env.JWT_SCRT,
-  //   {
-  //     jwtid: crypto.randomBytes(20).toString("hex"),
-  //     expiresIn: process.env.JWT_EXP,
-  //   }
-  // );
-
   // encode base64 the header
   const jsonHeader = JSON.stringify({
     alg: "HS256",

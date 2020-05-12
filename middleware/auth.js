@@ -12,9 +12,9 @@ exports.Protect = asyncHandler(async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
-  } /*  else if (req.cookie.tpken) {
+  } else if (req.cookie.tpken) {
     token = req.cookie.token;
-  } */
+  }
 
   // check if the token is here
   if (!token) next(new ErrorResponse("Not authorize to acces this route", 401));
@@ -77,7 +77,7 @@ exports.Protect = asyncHandler(async (req, res, next) => {
 
     if (base64urlSignature !== signature)
       return next(new ErrorResponse("Signature does not match. ", 403));
-    req.user = objPayload.sub;
+    req.user = user;
 
     next();
   } catch (error) {

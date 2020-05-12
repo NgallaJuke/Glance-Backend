@@ -14,103 +14,33 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
   let img_url = [];
   let files = [];
   let error = "";
-  let count = 0;
-  if (!req.files) {
+
+  if (!req.files || Array.from(req.files.img_url).length < 0) {
     return next(new ErrorResponse("Please add a photo", 400));
   }
 
-  console.log("req.files", Array.from(req.files.img_url).length);
+  // if there is only one file
   if (Array.from(req.files.img_url).length === 0) {
     const file = req.files.img_url;
-    // make sure the file is an image
-    if (!file.mimetype.startsWith("image")) {
-      error = new ErrorResponse("Please upload an image file", 403);
-      return next(error);
-    }
-    // make sure the image is not a gif
-    if (file.mimetype === "image/gif") {
-      error = new ErrorResponse("Gif image is not allow", 403);
-      return next(error);
-    }
-    // make sure the image is not a png
-    if (file.mimetype === "image/png") {
-      error = new ErrorResponse("PNG image is not allow", 403);
-      return next(error);
-    }
-    // check file size
-    if (file.size > process.env.MAX_PIC_SIZE) {
-      error = new ErrorResponse(
-        `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
-        400
-      );
-      return next(error);
-    }
-
-    // Create costum file name
-    file.name = `post_img[0]_${Date.now()}${path.parse(file.name).ext}`;
-
-    img_url.push(file.name);
+    fileCheck(file, (count = 0), img_url, error);
+    if (error) return console.log("Error :", error);
     // move the file
-    file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
-      if (err) {
-        return next(
-          new ErrorResponse(
-            `Problem while uploading the file ${file.name}`,
-            500
-          )
-        );
-      }
-    });
+    moveFileToPosts_pic(file);
   } else {
+    let count = 0;
     // save the files image
     Array.from(req.files.img_url).forEach((file) => {
-      // make sure the file is an image
-      if (!file.mimetype.startsWith("image")) {
-        error = new ErrorResponse("Please upload an image file", 403);
-        return next(error);
-      }
-      // make sure the image is not a gif
-      if (file.mimetype === "image/gif") {
-        error = new ErrorResponse("Gif image is not allow", 403);
-        return next(error);
-      }
-      // make sure the image is not a png
-      if (file.mimetype === "image/png") {
-        error = new ErrorResponse("PNG image is not allow", 403);
-        return next(error);
-      }
-      // check file size
-      if (file.size > process.env.MAX_PIC_SIZE) {
-        error = new ErrorResponse(
-          `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
-          400
-        );
-        return next(error);
-      }
-
-      // Create costum file name
-      file.name = `post_img[${count}]_${Date.now()}${
-        path.parse(file.name).ext
-      }`;
+      fileCheck(file, count, img_url, error);
       count++;
-      img_url.push(file.name);
       // move the file
       files.push(file);
     });
+
     if (error) return console.log("Error :", error);
 
-    //move all the files to publis folder
+    //move all the files to public folder
     files.forEach((file) => {
-      file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
-        if (err) {
-          return next(
-            new ErrorResponse(
-              `Problem while uploading the file ${file.name}`,
-              500
-            )
-          );
-        }
-      });
+      moveFileToPosts_pic(file);
     });
   }
 
@@ -127,7 +57,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     img_url,
     description: req.body.description,
     tags,
-    user: req.user,
+    user: req.user.id,
   });
   res.status(200).json({ success: true, post: post });
 });
@@ -136,7 +66,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/v1/post/delete
 // @access  Private/Tailors
 exports.DeletePost = asyncHandler(async (req, res, next) => {
-  const post = await Post.findOne({ user: req.user });
+  const post = await Post.findOne({ user: req.user.id });
   if (!post)
     return next(
       new ErrorResponse("User not authorize to make this request", 401)
@@ -184,11 +114,12 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    post.likes.liker.filter((liker) => liker.toString() === req.user).length > 0
+    post.likes.liker.filter((liker) => liker.toString() === req.user.id)
+      .length > 0
   )
     return next(new ErrorResponse("Post already liked.", 403));
 
-  post.likes.liker.push(req.user);
+  post.likes.liker.push(req.user.id);
   post.likes.count++;
 
   post.save();
@@ -204,11 +135,11 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    !post.likes.liker.filter((liker) => liker.toString() === req.user).length >
-    0
+    !post.likes.liker.filter((liker) => liker.toString() === req.user.id)
+      .length > 0
   )
     return next(new ErrorResponse("Post not liked.", 403));
-  post.likes.liker.pull(req.user);
+  post.likes.liker.pull(req.user.id);
   post.likes.count--;
 
   post.save();
@@ -234,7 +165,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
   const comment = await Comment.create({
     message: req.body.message,
     tags,
-    user: req.user,
+    user: req.user.id,
     post: req.body.id,
   });
   if (!comment)
@@ -242,7 +173,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
 
   post.comment.push(comment.id);
   post.save();
-  const user = await User.findById(req.user);
+  const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User Not Found", 404));
   user.comment.push(comment.id);
   user.save();
@@ -258,10 +189,10 @@ exports.LikeComment = asyncHandler(async (req, res, next) => {
   if (!comment) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    !comment.likes.liker.filter((liker) => liker.toString() === req.user)
+    !comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
       .length > 0
   ) {
-    comment.likes.liker.push(req.user);
+    comment.likes.liker.push(req.user.id);
     comment.likes.count++;
   }
   comment.save();
@@ -277,10 +208,10 @@ exports.UnlikeComment = asyncHandler(async (req, res, next) => {
   if (!comment) return next(new ErrorResponse("Comment not found", 404));
 
   if (
-    comment.likes.liker.filter((liker) => liker.toString() === req.user)
+    comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
       .length > 0
   ) {
-    comment.likes.liker.pull(req.user);
+    comment.likes.liker.pull(req.user.id);
     comment.likes.count--;
   }
   comment.save();
@@ -294,10 +225,12 @@ exports.UnlikeComment = asyncHandler(async (req, res, next) => {
 exports.SavePost = asyncHandler(async (req, res, next) => {
   let post = await Post.findById(req.body.id);
   if (!post) return next(new ErrorResponse("Post not found.", 404));
-  let user = await User.findById(req.user);
+  let user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 404));
 
-  if (user.saved.filter((saved) => saved.toString() === req.user).length > 0)
+  if (post.user == user.id) return next(new ErrorResponse("Owned post.", 403));
+
+  if (user.saved.filter((saved) => saved.toString() === req.user.id).length > 0)
     return next(new ErrorResponse("Post already saved.", 403));
 
   user.saved.push(post.id);
@@ -309,7 +242,7 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
 // // @route   DELETE /api/v1/post/save/delete
 // // @access  Private/Tailor
 exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user);
+  const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 404));
   if (!user.saved.includes(req.body.id))
     return next(new ErrorResponse("This post has not been saved.", 404));
@@ -320,3 +253,43 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
     .status(200)
     .json({ success: true, post: "The saved post has been deleted." });
 });
+
+const fileCheck = (file, count, img_url, error) => {
+  // make sure the file is an image
+  if (!file.mimetype.startsWith("image")) {
+    error = new ErrorResponse("Please upload an image file", 403);
+    return next(error);
+  }
+  // make sure the image is not a gif
+  if (file.mimetype === "image/gif") {
+    error = new ErrorResponse("Gif image is not allow", 403);
+    return next(error);
+  }
+  // make sure the image is not a png
+  if (file.mimetype === "image/png") {
+    error = new ErrorResponse("PNG image is not allow", 403);
+    return next(error);
+  }
+  // check file size
+  if (file.size > process.env.MAX_PIC_SIZE) {
+    error = new ErrorResponse(
+      `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
+      400
+    );
+    return next(error);
+  }
+
+  // Create costum file name
+  file.name = `post_img[${count}]_${Date.now()}${path.parse(file.name).ext}`;
+  img_url.push(file.name);
+};
+
+const moveFileToPosts_pic = (file) => {
+  file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
+    if (err) {
+      return next(
+        new ErrorResponse(`Problem while uploading the file ${file.name}`, 500)
+      );
+    }
+  });
+};

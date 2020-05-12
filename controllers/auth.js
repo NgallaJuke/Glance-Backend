@@ -78,7 +78,7 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/v1/auth/users/delete
 // @access  Private
 exports.deleteUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndDelete(req.user);
+  const user = await User.findByIdAndDelete(req.user.id);
   res.status(200).json({ success: true, data: {} });
 });
 
@@ -112,9 +112,10 @@ exports.Login = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.Logout = asyncHandler(async (req, res, next) => {
   //find the user with that email
-  const user = await User.findById(req.user);
+  const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 401));
 
+  // delete the jit token secret in the user document
   user.jti = undefined;
   await user.save();
   res.status(200).json({ success: true, user, message: "User Logged Out." });
@@ -124,7 +125,7 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user);
+  const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("The User is not found", 404));
 
   // get resset token
