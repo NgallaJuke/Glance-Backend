@@ -50,7 +50,7 @@ exports.Register = asyncHandler(async (req, res) => {
 });
 
 // @desc    Confirm User Registration
-// @route   POST /api/v1/auth/confirm-register/:fakeToken
+// @route   PUT /api/v1/auth/confirm-register/:fakeToken
 // @access  Public
 exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   // get hashed token
@@ -78,7 +78,7 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/v1/auth/users/delete
 // @access  Private
 exports.deleteUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndDelete(req.user.id);
+  const user = await User.findByIdAndDelete(req.user);
   res.status(200).json({ success: true, data: {} });
 });
 
@@ -101,26 +101,31 @@ exports.Login = asyncHandler(async (req, res, next) => {
   //Compare the user's password to the user's password saved in the database using the methods created at the User Model
   const pwdMatches = await user.matchPassword(password);
   if (!pwdMatches) return next(new ErrorResponse("Invalid credentials", 401));
+
+  user.jti = crypto.randomBytes(20).toString("hex");
+  await user.save();
   SendTokentoCookieResponse(user, 200, res);
 });
 
-// @desc    LogoutUser
-// @route   POST /api/v1/auth/logout
+// @desc    Logout User
+// @route   PUT /api/v1/auth/logout
 // @access  Private
 exports.Logout = asyncHandler(async (req, res, next) => {
   //find the user with that email
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user);
   if (!user) return next(new ErrorResponse("User not found.", 401));
 
-  SendTokentoCookieResponse(user, 200, res);
+  user.jti = undefined;
+  await user.save();
+  res.status(200).json({ success: true, user, message: "User Logged Out." });
 });
 
 // @desc    Get Current Logged User
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-  if (!user) return next(new ErrorResponse("User not found", 404));
+  const user = await User.findById(req.user);
+  if (!user) return next(new ErrorResponse("The User is not found", 404));
 
   // get resset token
   res.status(200).json({ success: true, data: user });

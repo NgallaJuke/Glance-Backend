@@ -127,7 +127,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     img_url,
     description: req.body.description,
     tags,
-    user: req.user.id,
+    user: req.user,
   });
   res.status(200).json({ success: true, post: post });
 });
@@ -136,7 +136,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/v1/post/delete
 // @access  Private/Tailors
 exports.DeletePost = asyncHandler(async (req, res, next) => {
-  const post = await Post.findOne({ user: req.user.id });
+  const post = await Post.findOne({ user: req.user });
   if (!post)
     return next(
       new ErrorResponse("User not authorize to make this request", 401)
@@ -184,12 +184,11 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    post.likes.liker.filter((liker) => liker.toString() === req.user.id)
-      .length > 0
+    post.likes.liker.filter((liker) => liker.toString() === req.user).length > 0
   )
     return next(new ErrorResponse("Post already liked.", 403));
 
-  post.likes.liker.push(req.user.id);
+  post.likes.liker.push(req.user);
   post.likes.count++;
 
   post.save();
@@ -205,11 +204,11 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    !post.likes.liker.filter((liker) => liker.toString() === req.user.id)
-      .length > 0
+    !post.likes.liker.filter((liker) => liker.toString() === req.user).length >
+    0
   )
     return next(new ErrorResponse("Post not liked.", 403));
-  post.likes.liker.pull(req.user.id);
+  post.likes.liker.pull(req.user);
   post.likes.count--;
 
   post.save();
@@ -235,7 +234,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
   const comment = await Comment.create({
     message: req.body.message,
     tags,
-    user: req.user.id,
+    user: req.user,
     post: req.body.id,
   });
   if (!comment)
@@ -243,7 +242,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
 
   post.comment.push(comment.id);
   post.save();
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user);
   if (!user) return next(new ErrorResponse("User Not Found", 404));
   user.comment.push(comment.id);
   user.save();
@@ -259,10 +258,10 @@ exports.LikeComment = asyncHandler(async (req, res, next) => {
   if (!comment) return next(new ErrorResponse("Post not found", 404));
 
   if (
-    !comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
+    !comment.likes.liker.filter((liker) => liker.toString() === req.user)
       .length > 0
   ) {
-    comment.likes.liker.push(req.user.id);
+    comment.likes.liker.push(req.user);
     comment.likes.count++;
   }
   comment.save();
@@ -278,10 +277,10 @@ exports.UnlikeComment = asyncHandler(async (req, res, next) => {
   if (!comment) return next(new ErrorResponse("Comment not found", 404));
 
   if (
-    comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
+    comment.likes.liker.filter((liker) => liker.toString() === req.user)
       .length > 0
   ) {
-    comment.likes.liker.pull(req.user.id);
+    comment.likes.liker.pull(req.user);
     comment.likes.count--;
   }
   comment.save();
@@ -295,10 +294,10 @@ exports.UnlikeComment = asyncHandler(async (req, res, next) => {
 exports.SavePost = asyncHandler(async (req, res, next) => {
   let post = await Post.findById(req.body.id);
   if (!post) return next(new ErrorResponse("Post not found.", 404));
-  let user = await User.findById(req.user.id);
+  let user = await User.findById(req.user);
   if (!user) return next(new ErrorResponse("User not found.", 404));
 
-  if (user.saved.filter((saved) => saved.toString() === req.user.id).length > 0)
+  if (user.saved.filter((saved) => saved.toString() === req.user).length > 0)
     return next(new ErrorResponse("Post already saved.", 403));
 
   user.saved.push(post.id);
@@ -310,7 +309,7 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
 // // @route   DELETE /api/v1/post/save/delete
 // // @access  Private/Tailor
 exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user);
   if (!user) return next(new ErrorResponse("User not found.", 404));
   if (!user.saved.includes(req.body.id))
     return next(new ErrorResponse("This post has not been saved.", 404));

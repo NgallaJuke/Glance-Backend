@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const cryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 
@@ -29,15 +30,12 @@ const UserSchema = new mongoose.Schema({
   userName: {
     type: String,
     maxlength: 30,
-    unique: [true, "this username is already exist"],
+    unique: [true, "this userName is already exist"],
     required: [true, "Please add your userName"],
-    match: [/^(?!.*\.\.)(?!.*\.$)[^\W][\w.]{0,29}$/gim, "User Name Unvalide"],
   },
   password: {
     type: String,
     required: [true, "Please add a password"],
-    minlength: 6,
-    maxlength: 20,
     select: false,
   },
   role: {
@@ -86,6 +84,9 @@ const UserSchema = new mongoose.Schema({
     },
   ],
 
+  jti: String,
+  exp: Number,
+
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   RegisterToken: String,
@@ -117,14 +118,62 @@ UserSchema.pre("save", async function (next) {
   const salt = await bcrypt.genSalt(10);
   //hash the password
   this.password = await bcrypt.hash(this.password, salt);
+  this.user_secret = crypto.randomBytes(20).toString("hex");
+
+  this.jti = crypto.randomBytes(20).toString("hex");
+  this.exp = Date.now() + process.env.JWT_EXP.substring(0, 2) * 86400000;
 });
 
 // Sign JWT an return
 UserSchema.methods.getSignedJWTtoken = function () {
   // return the Token we create from the secret code and times' expiration
-  return jwt.sign({ id: this._id }, process.env.JWT_SCRT, {
-    expiresIn: process.env.JWT_EXP,
+  // return jwt.sign(
+  //   {
+  //     id: this._id,
+  //   },
+  //   process.env.JWT_SCRT,
+  //   {
+  //     jwtid: crypto.randomBytes(20).toString("hex"),
+  //     expiresIn: process.env.JWT_EXP,
+  //   }
+  // );
+
+  // encode base64 the header
+  const jsonHeader = JSON.stringify({
+    alg: "HS256",
+    typ: "JWT",
   });
+  const base64urlHeader = Buffer.from(jsonHeader)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\=+$/m, "");
+
+  // encode vase64 the payload
+  const jsonPayload = JSON.stringify({
+    sub: this.id,
+    iat: Date.now(),
+    exp: this.exp,
+    jti: this.jti,
+  });
+  const base64urlPayload = Buffer.from(jsonPayload)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\=+$/m, "");
+
+  // hash calculation with Crypto-JS.
+  // The two replace expressions convert Base64 to Base64url format by replacing '+' with '-'
+  // and stripping the '=' padding
+  const base64urlSignature = cryptoJS
+    .HmacSHA256(
+      base64urlHeader + "." + base64urlPayload,
+      process.env.JWT_SCRT,
+      this.jti
+    )
+    .toString(cryptoJS.enc.Base64)
+    .replace(/\+/g, "-")
+    .replace(/\=+$/m, "");
+
+  return `${base64urlHeader}.${base64urlPayload}.${base64urlSignature}`;
 };
 
 // Check if the user entered password Matches to the hashed password in the database
