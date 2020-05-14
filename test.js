@@ -45,21 +45,4 @@
 
 // console.log("jwt>>", jwt);
 
-const jwt = require("jsonwebtoken");
-
-const token = jwt.sign(
-  {
-    id: "45654954fsdfsdfsfd",
-  },
-  "kldjfskdlgkmjdsfgojsdkfjgmksdjfg",
-  {
-    jwtid: "fsgmjfglmsdjfgsmdfjmgk4654sf4d",
-    expiresIn: 10,
-  }
-);
-
-console.log("Token", token);
-
-const decoded = jwt.decode(token, "kldjfskdlgkmjdsfgojsdkfjgmksdjfg");
-
-console.log("decoded", decoded);
+console.log(Date.now() / 1000);

@@ -106,10 +106,10 @@ exports.GetPostByUser = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Like A Post
-// // @route   PUT /api/v1/post/like
+// // @route   PUT /api/v1/post/:id/like
 // // @access  Private
 exports.LikePost = asyncHandler(async (req, res, next) => {
-  let post = await Post.findById(req.body.id);
+  let post = await Post.findById(req.params.id);
 
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
@@ -128,10 +128,10 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    UnLike A Post
-// // @route   PUT /api/v1/post/unlike
+// // @route   PUT /api/v1/post/:id/unlike
 // // @access  Private
 exports.UnlikePost = asyncHandler(async (req, res, next) => {
-  let post = await Post.findById(req.body.id);
+  let post = await Post.findById(req.params.id);
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   if (
@@ -148,11 +148,11 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Comment A Post
-// // @route   PUT /api/v1/post/comment
+// // @route   PUT /api/v1/post/:id/comment
 // // @access  Private
 exports.CommentPost = asyncHandler(async (req, res, next) => {
   // get the post that the connected user comment on
-  const post = await Post.findById(req.body.id);
+  const post = await Post.findById(req.params.id);
   if (!post) return next(new ErrorResponse("Post not found", 404));
 
   // check if the description has any #(tags) in it
@@ -166,7 +166,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
     message: req.body.message,
     tags,
     user: req.user.id,
-    post: req.body.id,
+    post: req.params.id,
   });
   if (!comment)
     return next(new ErrorResponse("Error while creating the comment", 500));
@@ -181,10 +181,10 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Like A Comment
-// // @route   PUT /api/v1/post/comment/like
+// // @route   PUT /api/v1/post/comment/:id/like
 // // @access  Private
 exports.LikeComment = asyncHandler(async (req, res, next) => {
-  let comment = await Comment.findById(req.body.id);
+  let comment = await Comment.findById(req.params.id);
 
   if (!comment) return next(new ErrorResponse("Post not found", 404));
 
@@ -201,10 +201,10 @@ exports.LikeComment = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    UnLike A Comment
-// // @route   PUT /api/v1/post/comment/unlike
+// // @route   PUT /api/v1/post/comment/:id/unlike
 // // @access  Private
 exports.UnlikeComment = asyncHandler(async (req, res, next) => {
-  let comment = await Comment.findById(req.body.id);
+  let comment = await Comment.findById(req.params.id);
   if (!comment) return next(new ErrorResponse("Comment not found", 404));
 
   if (
@@ -220,10 +220,10 @@ exports.UnlikeComment = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Save A Post
-// // @route   PUT /api/v1/post/save
+// // @route   PUT /api/v1/post/:id/save
 // // @access  Private
 exports.SavePost = asyncHandler(async (req, res, next) => {
-  let post = await Post.findById(req.body.id);
+  let post = await Post.findById(req.params.id);
   if (!post) return next(new ErrorResponse("Post not found.", 404));
   let user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 404));
@@ -239,15 +239,15 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
 });
 
 // // @desc    Delete A Saved Post
-// // @route   DELETE /api/v1/post/save/delete
+// // @route   DELETE /api/v1/post/save/:id/delete
 // // @access  Private/Tailor
 exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 404));
-  if (!user.saved.includes(req.body.id))
+  if (!user.saved.includes(req.params.id))
     return next(new ErrorResponse("This post has not been saved.", 404));
 
-  user.saved.pull(req.body.id);
+  user.saved.pull(req.params.id);
   user.save();
   res
     .status(200)

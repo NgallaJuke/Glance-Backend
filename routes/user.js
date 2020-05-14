@@ -15,10 +15,10 @@ const advancedResults = require("../middleware/advancedResults");
 
 router.route("/").get(advancedResults(User), getAllUsers);
 router.route("/:id").get(GetSingleUser);
-router.route("/follow").put(Protect, FollowUser);
-router.route("/unfollow").put(Protect, UnfollowUser);
-router.route("/block").put(Protect, BlockUser);
-router.route("/unblock").put(Protect, UnblockUser);
+router.route("/:id/follow").put(Protect, FollowUser);
+router.route("/:id/unfollow").put(Protect, UnfollowUser);
+router.route("/:id/block").put(Protect, BlockUser);
+router.route("/:id/unblock").put(Protect, UnblockUser);
 router.route("/update").put(Protect, UpdateUser);
 router.route("/update-avatar").put(Protect, UpdateUserProfil);
 

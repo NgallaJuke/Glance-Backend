@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const cryptoJS = require("crypto-js");
-const jwt = require("jsonwebtoken");
 const path = require("path");
 
 const UserSchema = new mongoose.Schema({
@@ -83,14 +82,6 @@ const UserSchema = new mongoose.Schema({
       ref: "Post",
     },
   ],
-
-  jti: String,
-  exp: Number,
-
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
-  RegisterToken: String,
-  confirmRegisterExpire: Date,
   createdAt: {
     type: Date,
     default: Date.now,
@@ -98,6 +89,11 @@ const UserSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
   },
+  jti: String,
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
+  RegisterToken: String,
+  confirmRegisterExpire: Date,
 });
 /* ----------------NOTE------------------- */
 /*
@@ -121,47 +117,22 @@ UserSchema.pre("save", async function (next) {
   this.user_secret = crypto.randomBytes(20).toString("hex");
 
   this.jti = crypto.randomBytes(20).toString("hex");
-  this.exp = Date.now() + process.env.JWT_EXP.substring(0, 2) * 86400000;
 });
 
 // Sign JWT an return
 UserSchema.methods.getSignedJWTtoken = function () {
-  // encode base64 the header
-  const jsonHeader = JSON.stringify({
-    alg: "HS256",
-    typ: "JWT",
-  });
-  const base64urlHeader = Buffer.from(jsonHeader)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\=+$/m, "");
-
-  // encode vase64 the payload
-  const jsonPayload = JSON.stringify({
-    sub: this.id,
-    iat: Date.now(),
-    exp: this.exp,
-    jti: this.jti,
-  });
-  const base64urlPayload = Buffer.from(jsonPayload)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\=+$/m, "");
-
-  // hash calculation with Crypto-JS.
-  // The two replace expressions convert Base64 to Base64url format by replacing '+' with '-'
-  // and stripping the '=' padding
-  const base64urlSignature = cryptoJS
-    .HmacSHA256(
-      base64urlHeader + "." + base64urlPayload,
-      process.env.JWT_SCRT,
-      this.jti
-    )
-    .toString(cryptoJS.enc.Base64)
-    .replace(/\+/g, "-")
-    .replace(/\=+$/m, "");
-
-  return `${base64urlHeader}.${base64urlPayload}.${base64urlSignature}`;
+  // return the Token we create from the secret code and times' expiration
+  return jwt.sign(
+    {
+      sub: this.id,
+      jti: this.jti,
+      role: this.role,
+    },
+    process.env.JWT_SCRT,
+    {
+      expiresIn: process.env.JWT_EXP,
+    }
+  );
 };
 
 // Check if the user entered password Matches to the hashed password in the database

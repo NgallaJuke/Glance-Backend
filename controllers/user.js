@@ -4,14 +4,14 @@ const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
 
 // @desc    Get All Users
-// @route   GET /api/v1/auth/users
+// @route   GET /api/v1/auth/user
 // @access  Public
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
   res.status(200).json(res.advancedResults);
 });
 
 // @desc    Get A User
-// @route   GET /api/v1/auth/users/:id
+// @route   GET /api/v1/auth/user/:id
 // @access  Public
 exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.params.id);
@@ -22,14 +22,14 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Follow a User
-// @route   PUT /api/v1/user/follow
+// @route   PUT /api/v1/user/:id/follow
 // @access  Private
 exports.FollowUser = asyncHandler(async (req, res, next) => {
-  if (req.user.id === req.body.id)
+  if (req.user.id === req.params.id)
     return next(new ErrorResponse("User can not follow itself."));
 
   //get the id of the user that we follow
-  let followed = await User.findById(req.body.id);
+  let followed = await User.findById(req.params.id);
 
   if (!followed)
     return next(new ErrorResponse("Followed user not found.", 404));
@@ -49,37 +49,36 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
       new ErrorResponse("User is Blocked so can't be followed.", 403)
     );
 
-  let user = await User.findById(req.user.id);
-
-  // check if the user exist
-  if (!user) return next(new ErrorResponse("User Not Found.", 404));
-
   followed = await User.findByIdAndUpdate(
-    req.body.id,
+    req.params.id,
     { $push: { follower: req.user.id } },
     { new: true, runValidators: true }
   );
 
-  user = await User.findByIdAndUpdate(
+  let user = await User.findByIdAndUpdate(
     req.user.id,
-    { $push: { following: req.body.id } },
+    { $push: { following: req.params.id } },
     {
       new: true,
       runValidators: true,
     }
   );
+
+  // check if the user exist
+  if (!user) return next(new ErrorResponse("User Not Found.", 404));
+
   res.status(200).json({ success: true, followed, user });
 });
 
 // @desc    Unfollow a User
-// @route   PUT /api/v1/user/unfollow
+// @route   PUT /api/v1/user/:id/unfollow
 // @access  Private
 exports.UnfollowUser = asyncHandler(async (req, res, next) => {
-  if (req.user.id === req.body.id)
+  if (req.user.id === req.params.id)
     return next(new ErrorResponse("User can not unfollow itself."));
 
   //get the id of the user that we unfollow
-  let unfollowed = await User.findById(req.body.id);
+  let unfollowed = await User.findById(req.params.id);
 
   let user = await User.findById(req.user.id);
 
@@ -88,14 +87,14 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
 
   // check if the connected user is following this user
   if (
-    user.following.filter((following) => following.toString() === req.body.id)
+    user.following.filter((following) => following.toString() === req.params.id)
       .length === 0
   )
     return next(new ErrorResponse("User is not followed", 403));
 
   //delete the connected user to this user's follower list
   unfollowed = await User.findByIdAndUpdate(
-    req.body.id,
+    req.params.id,
     { $pull: { follower: req.user.id } },
     { new: true, runValidators: true }
   );
@@ -103,7 +102,7 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
   //delete the unfollowed user to the connected user's following list
   user = await User.findByIdAndUpdate(
     req.user.id,
-    { $pull: { following: req.body.id } },
+    { $pull: { following: req.params.id } },
     {
       new: true,
       runValidators: true,
@@ -113,13 +112,13 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Block a User
-// @route   PUT /api/v1/user/block
+// @route   PUT /api/v1/user/:id/block
 // @access  Private
 exports.BlockUser = asyncHandler(async (req, res, next) => {
-  if (req.user.id === req.body.id)
+  if (req.user.id === req.params.id)
     return next(new ErrorResponse("User can not block itself."));
   //get the id of the user that we block
-  let blocked = await User.findById(req.body.id);
+  let blocked = await User.findById(req.params.id);
 
   if (!blocked) return next(new ErrorResponse("Blocked User not found", 404));
 
@@ -135,7 +134,7 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
   if (!user) return next(new ErrorResponse("User Not Found", 404));
 
   blocked = await User.findByIdAndUpdate(
-    req.body.id,
+    req.params.id,
     {
       $push: { blockedBy: req.user.id },
       $pull: { following: req.user.id },
@@ -148,9 +147,9 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
   user = await User.findByIdAndUpdate(
     req.user.id,
     {
-      $push: { blocked: req.body.id },
-      $pull: { follower: req.body.id },
-      $pull: { following: req.body.id },
+      $push: { blocked: req.params.id },
+      $pull: { follower: req.params.id },
+      $pull: { following: req.params.id },
     },
 
     { new: true, runValidators: true }
@@ -159,13 +158,13 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Unblock a User
-// @route   PUT /api/v1/user/unblock
+// @route   PUT /api/v1/user/:id/unblock
 // @access  Private
 exports.UnblockUser = asyncHandler(async (req, res, next) => {
-  if (req.user.id === req.body.id)
+  if (req.user.id === req.params.id)
     return next(new ErrorResponse("User can not unblock itself."));
   //get the id of the user that we block
-  let blocked = await User.findById(req.body.id);
+  let blocked = await User.findById(req.params.id);
 
   if (!blocked) return next(new ErrorResponse("Blocked User not found", 404));
 
@@ -182,21 +181,21 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
   if (!user) return next(new ErrorResponse("User Not Found", 404));
 
   blocked = await User.findByIdAndUpdate(
-    req.body.id,
+    req.params.id,
     { $pull: { blockedBy: req.user.id } },
     { new: true, runValidators: true }
   );
 
   user = await User.findByIdAndUpdate(
     req.user.id,
-    { $pull: { blocked: req.body.id } },
+    { $pull: { blocked: req.params.id } },
     { new: true, runValidators: true }
   );
   res.status(200).json({ success: true, blocked, user });
 });
 
 // @desc    Update a User
-// @route   PUT /api/v1/auth/users/update
+// @route   PUT /api/v1/auth/user/update
 // @access  Private
 exports.UpdateUser = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);
@@ -204,7 +203,7 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Access not authorize", 401));
   }
   user.updatedAt = Date.now;
-  user = await User.findByIdAndUpdate(req.user.id, req.body, {
+  user = await User.findByIdAndUpdate(req.user.id, req.params, {
     new: true,
     runValidators: true,
   });
@@ -212,7 +211,7 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    User Change Profile Picture
-// @route   PUT /api/v1/auth/users/update-avatar
+// @route   PUT /api/v1/auth/user/update-avatar
 // @access  Private
 exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);

@@ -4,6 +4,8 @@ const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 // @desc    Register User
 // @route   POST /api/v1/auth/register
@@ -68,6 +70,14 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   user.RegisterToken = undefined;
   user.confirmRegisterExpire = undefined;
 
+  //pt the user in the whitelist
+  let stream = fs.createWriteStream(
+    path.join(__dirname, "../config/whitelist.txt"),
+    { flags: "a" }
+  );
+
+  stream.write(user.jti + "\n");
+  stream.end();
   // save the user
   await user.save();
 
@@ -103,7 +113,18 @@ exports.Login = asyncHandler(async (req, res, next) => {
   if (!pwdMatches) return next(new ErrorResponse("Invalid credentials", 401));
 
   user.jti = crypto.randomBytes(20).toString("hex");
+
   await user.save();
+
+  let stream = fs.createWriteStream(
+    path.join(__dirname, "../config/whitelist.txt"),
+    { flags: "a" }
+  );
+  console.log("Login User", user.jti);
+
+  stream.write(user.jti + "\n");
+  stream.end();
+
   SendTokentoCookieResponse(user, 200, res);
 });
 
@@ -114,6 +135,23 @@ exports.Logout = asyncHandler(async (req, res, next) => {
   //find the user with that email
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 401));
+
+  let whitelist = fs.readFileSync(
+    path.join(__dirname, "../config/whitelist.txt"),
+    "utf8"
+  );
+  console.log("Whitelist", whitelist);
+  if (whitelist.includes(user.jti)) {
+    console.log("Logout User", user.jti);
+    let newWhitelist = whitelist.replace(user.jti, "");
+    console.log("newWhitelist", newWhitelist);
+
+    fs.writeFileSync(
+      path.join(__dirname, "../config/whitelist.txt"),
+      newWhitelist,
+      "utf-8"
+    );
+  }
 
   // delete the jit token secret in the user document
   user.jti = undefined;
