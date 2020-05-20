@@ -1,2 +1,4 @@
-node_modules
-public
+node_modules/
+config/config.env
+config/whitelist.txt
+
