@@ -5,6 +5,7 @@ const Comment = require("../models/Comment");
 const ObjectId = require("mongoose").Types.ObjectId;
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
+const client = require("../utils/redis");
 const path = require("path");
 
 // @desc    Create A Post
@@ -53,13 +54,41 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 
   if (img_url.length === 0)
     return next(new ErrorResponse("Error while uploading the photos", 500));
-  const post = await Post.create({
-    img_url,
-    description: req.body.description,
-    tags,
-    user: req.user.id,
-  });
-  res.status(200).json({ success: true, post: post });
+
+  try {
+    const post = await Post.create({
+      img_url,
+      description: req.body.description,
+      tags,
+      user: req.user.id,
+    });
+
+    const postKey = `PostId:${post.id}`;
+    // console.log("postKey: ", postKey);
+
+    //Caches the post create by the user
+    // const postCached = client.set(postKey, JSON.stringify(post));
+    // if (!postCached) return next(new ErrorResponse("Error Caching.", 500));
+
+    // client.get(postKey, (err, post) => {
+    //   if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+    //   console.log("Post:", JSON.parse(post));
+    // });
+
+    // Create user's hash timeline
+    const userKey = `UserId:${post.user}`;
+    const userTimeline = client.hset(userKey, postKey, JSON.stringify(post));
+    if (!userTimeline) return next(new ErrorResponse("Error Caching.", 500));
+
+    client.hget(userKey, postKey, (err, userTimeline) => {
+      if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+      console.log("userTimeline:", JSON.parse(userTimeline));
+    });
+
+    res.status(200).json({ success: true, post: post });
+  } catch (error) {
+    console.log("Error", error);
+  }
 });
 
 // @desc    Delete A Post
