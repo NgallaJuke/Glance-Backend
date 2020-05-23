@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const Post = require("../models/Post");
 const {
-  GetPostByUser,
+  GetUserTimeline,
   getAllPosts,
   CreatePost,
   DeletePost,
@@ -15,10 +15,10 @@ const {
   DeleteSavedPost,
 } = require("../controllers/post");
 const { Protect, Authorize } = require("../middleware/auth");
-const advancedResults = require("../middleware/advancedResults");
+// const advancedResults = require("../middleware/advancedResults");
 
-router.route("/").get(advancedResults(Post), getAllPosts);
-router.route("/:userName").get(advancedResults(Post), GetPostByUser);
+router.route("/").get(getAllPosts);
+router.route("/:userName").get(GetUserTimeline);
 router.route("/create").post(Protect, Authorize("tailor"), CreatePost);
 router.route("/delete").delete(Protect, Authorize("tailor"), DeletePost);
 router.route("/:id").get(GetSinglePost);

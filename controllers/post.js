@@ -64,26 +64,11 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     });
 
     const postKey = `PostId:${post.id}`;
-    // console.log("postKey: ", postKey);
-
-    //Caches the post create by the user
-    // const postCached = client.set(postKey, JSON.stringify(post));
-    // if (!postCached) return next(new ErrorResponse("Error Caching.", 500));
-
-    // client.get(postKey, (err, post) => {
-    //   if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-    //   console.log("Post:", JSON.parse(post));
-    // });
 
     // Create user's hash timeline
-    const userKey = `UserId:${post.user}`;
+    const userKey = `User:${req.user.name}`;
     const userTimeline = client.hset(userKey, postKey, JSON.stringify(post));
     if (!userTimeline) return next(new ErrorResponse("Error Caching.", 500));
-
-    client.hget(userKey, postKey, (err, userTimeline) => {
-      if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-      console.log("userTimeline:", JSON.parse(userTimeline));
-    });
 
     res.status(200).json({ success: true, post: post });
   } catch (error) {
@@ -124,14 +109,24 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @desc    Get The User Connected Posts
 // @route   GET /api/v1/post/:userName
 // @access  Public
-exports.GetPostByUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findOne({ userName: req.params.userName });
+exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
+  let timeLine = {};
+  // Get the user TimeLine from Redis
+  client.hgetall(`User:${req.params.userName}`, (err, posts) => {
+    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
 
-  if (!user) return next(new ErrorResponse("User not found", 404));
-  const post = await Post.find({ user: user.id });
-  if (!post) return next(new ErrorResponse("Post not found", 404));
+    for (const post in posts) {
+      if (posts.hasOwnProperty(post)) {
+        const element = posts[post];
+        timeLine[post] = JSON.parse(element);
+      }
+    }
 
-  res.status(200).json({ success: true, post });
+    res.status(200).json({
+      success: true,
+      timeLine,
+    });
+  });
 });
 
 // // @desc    Like A Post

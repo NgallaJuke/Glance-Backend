@@ -127,6 +127,7 @@ UserSchema.methods.getSignedJWTtoken = function () {
       sub: this.id,
       jti: this.jti,
       role: this.role,
+      name: this.userName,
     },
     process.env.JWT_SCRT,
     {
