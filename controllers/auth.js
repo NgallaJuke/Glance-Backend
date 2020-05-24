@@ -3,6 +3,7 @@ const User = require("../models/User");
 const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const sendEmail = require("../utils/sendEmail");
+const client = require("../utils/redis");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -163,11 +164,21 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-  if (!user) return next(new ErrorResponse("The User is not found", 404));
+  let keyCurrentUser = `UserProfil:${req.user.name}`;
+  console.log("USERNAME", keyCurrentUser);
 
-  // get resset token
-  res.status(200).json({ success: true, data: user });
+  client.get(keyCurrentUser, async (err, user) => {
+    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+
+    if (!user) {
+      const user = await User.findById(req.user.id);
+      if (!user) return next(new ErrorResponse("The User is not found", 404));
+      res.status(200).json({ success: true, user });
+      return;
+    }
+    let UserProfil = JSON.parse(user);
+    res.status(200).json({ success: true, UserProfil });
+  });
 });
 
 // @desc    Forgot Password

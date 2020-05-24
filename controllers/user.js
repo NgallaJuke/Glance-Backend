@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
+const client = require("../utils/redis");
 const path = require("path");
 
 // @desc    Get All Users
@@ -33,7 +34,6 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
 
   if (!followed)
     return next(new ErrorResponse("Followed user not found.", 404));
-  console.log("followed.follower", followed.follower.length);
 
   if (
     followed.follower.filter((follower) => follower.toString() === req.user.id)
@@ -55,6 +55,13 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   );
 
+  // set the followed user a UserProfil cache
+  const keyfollowedUser = `UserProfil:${followed.userName}`;
+  client.set(keyfollowedUser, JSON.stringify(followed));
+  client.get(keyfollowedUser, (err, followed) =>
+    console.log("followed", followed)
+  );
+
   let user = await User.findByIdAndUpdate(
     req.user.id,
     { $push: { following: req.params.id } },
@@ -64,8 +71,12 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
     }
   );
 
-  // check if the user exist
   if (!user) return next(new ErrorResponse("User Not Found.", 404));
+  // set the follower user a UserProfil cache
+  const keyfollowerUser = `UserProfil:${req.user.name}`;
+  client.set(keyfollowerUser, JSON.stringify(user));
+  client.get(keyfollowerUser, (err, user) => console.log("USER", user));
+  // check if the user exist
 
   res.status(200).json({ success: true, followed, user });
 });
@@ -99,6 +110,10 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   );
 
+  // set the followed user a UserProfil cache
+  const keyfollowedUser = `UserProfil:${unfollowed.name}`;
+  client.set(keyfollowedUser, JSON.stringify(unfollowed));
+
   //delete the unfollowed user to the connected user's following list
   user = await User.findByIdAndUpdate(
     req.user.id,
@@ -108,6 +123,11 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
       runValidators: true,
     }
   );
+
+  // set the follower user a UserProfil cache
+  const keyfollowerUser = `UserProfil:${user.name}`;
+  client.set(keyfollowerUser, JSON.stringify(user));
+
   res.status(200).json({ success: true, unfollowed, user });
 });
 

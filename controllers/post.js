@@ -66,10 +66,42 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     const postKey = `PostId:${post.id}`;
 
     // Create user's hash timeline
-    const userKey = `User:${req.user.name}`;
+    const userKey = `User:${req.user.id}`;
     const userTimeline = client.hset(userKey, postKey, JSON.stringify(post));
     if (!userTimeline) return next(new ErrorResponse("Error Caching.", 500));
 
+    // send the post to the user's followers timeline
+    let keyCurrentUser = `UserProfil:${req.user.name}`;
+    console.log("USERNAME", keyCurrentUser);
+
+    client.get(keyCurrentUser, async (err, user) => {
+      if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+      console.log("User", user);
+
+      if (!user) {
+        const user = await User.findById(req.user.id);
+        if (!user) return next(new ErrorResponse("The User is not found", 404));
+      }
+      let UserProfil = JSON.parse(user);
+      console.log("UserProfil", UserProfil);
+
+      const followers = UserProfil.follower;
+      console.log("followers", followers);
+
+      followers.forEach((follower) => {
+        console.log("HEERE");
+
+        // Create user's follower hash timeline
+        const keyFollower = `User:${follower}`;
+        const userTimeline = client.hset(
+          keyFollower,
+          postKey,
+          JSON.stringify(post)
+        );
+        if (!userTimeline)
+          return next(new ErrorResponse("Error Caching.", 500));
+      });
+    });
     res.status(200).json({ success: true, post: post });
   } catch (error) {
     console.log("Error", error);
@@ -107,24 +139,25 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get The User Connected Posts
-// @route   GET /api/v1/post/:userName
+// @route   GET /api/v1/post/:id
 // @access  Public
 exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
-  let timeLine = {};
-  // Get the user TimeLine from Redis
-  client.hgetall(`User:${req.params.userName}`, (err, posts) => {
+  client.hgetall(`User:${req.params.id}`, (err, posts) => {
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+    console.log("posts", posts);
 
+    let userFeed = {};
     for (const post in posts) {
       if (posts.hasOwnProperty(post)) {
         const element = posts[post];
-        timeLine[post] = JSON.parse(element);
+        userFeed[post] = JSON.parse(element);
       }
+      console.log("userFeed", userFeed);
     }
 
     res.status(200).json({
       success: true,
-      timeLine,
+      timeLine: userFeed,
     });
   });
 });
@@ -317,3 +350,8 @@ const moveFileToPosts_pic = (file) => {
     }
   });
 };
+
+// const GetPostHash = (client, userName, next, callback) => {
+//   // Get the user TimeLine from Redis
+
+// };
