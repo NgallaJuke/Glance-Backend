@@ -7,6 +7,11 @@ const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const client = require("../utils/redis");
 const path = require("path");
+const {
+  CreateUserTimeLine,
+  CacheUserProfil,
+  ReadCachedUserProfil,
+} = require("../middleware/redis-func");
 
 // @desc    Create A Post
 // @route   GET /api/v1/post/create
@@ -63,44 +68,39 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       user: req.user.id,
     });
 
-    const postKey = `PostId:${post.id}`;
-
-    // Create user's hash timeline
-    const userKey = `User:${req.user.id}`;
-    const userTimeline = client.hset(userKey, postKey, JSON.stringify(post));
-    if (!userTimeline) return next(new ErrorResponse("Error Caching.", 500));
-
     // send the post to the user's followers timeline
     let keyCurrentUser = `UserProfil:${req.user.name}`;
-    console.log("USERNAME", keyCurrentUser);
-
     client.get(keyCurrentUser, async (err, user) => {
       if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-      console.log("User", user);
 
       if (!user) {
-        const user = await User.findById(req.user.id);
-        if (!user) return next(new ErrorResponse("The User is not found", 404));
+        const userdb = await User.findById(req.user.id);
+
+        if (!userdb)
+          return next(new ErrorResponse("The User is not found", 404));
+
+        CacheUserProfil(req.user.name, userdb);
+        let UserProfil = JSON.parse(userdb);
+
+        const followers = UserProfil.follower;
+        if (followers) {
+          followers.forEach((follower) => {
+            // Create user's follower hash timeline
+            CreateUserTimeLine(follower, post.id, post);
+          });
+        }
+      } else {
+        let UserProfil = JSON.parse(user);
+
+        const followers = UserProfil.follower;
+        if (followers) {
+          followers.forEach((follower) => {
+            // Create user's follower hash timeline
+
+            CreateUserTimeLine(follower, post.id, post);
+          });
+        }
       }
-      let UserProfil = JSON.parse(user);
-      console.log("UserProfil", UserProfil);
-
-      const followers = UserProfil.follower;
-      console.log("followers", followers);
-
-      followers.forEach((follower) => {
-        console.log("HEERE");
-
-        // Create user's follower hash timeline
-        const keyFollower = `User:${follower}`;
-        const userTimeline = client.hset(
-          keyFollower,
-          postKey,
-          JSON.stringify(post)
-        );
-        if (!userTimeline)
-          return next(new ErrorResponse("Error Caching.", 500));
-      });
     });
     res.status(200).json({ success: true, post: post });
   } catch (error) {
@@ -126,7 +126,9 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/post
 // @access  Public
 exports.getAllPosts = asyncHandler(async (req, res, next) => {
-  res.status(200).json(res.advancedResults);
+  const post = await Post.find();
+  if (!post) return next(new ErrorResponse("Posts not found. ", 404));
+  res.status(200).json({ success: true, post });
 });
 
 // @desc    Get A Post
@@ -139,22 +141,41 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get The User Connected Posts
-// @route   GET /api/v1/post/:id
-// @access  Public
+// @route   GET /api/v1/post/timeline
+// @access  Private
 exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
-  client.hgetall(`User:${req.params.id}`, (err, posts) => {
+  // req.params.id ==userName
+  client.hgetall(`User:${req.user.name}`, async (err, posts) => {
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-    console.log("posts", posts);
 
-    let userFeed = {};
+    let userFeed = [];
     for (const post in posts) {
-      if (posts.hasOwnProperty(post)) {
-        const element = posts[post];
-        userFeed[post] = JSON.parse(element);
-      }
-      console.log("userFeed", userFeed);
-    }
+      console.log("post", post);
 
+      if (posts.hasOwnProperty(post)) {
+        console.log("post", post);
+        const element = posts[post];
+        console.log("element", element);
+        userFeed.push(JSON.parse(element));
+      }
+    }
+    // if It a new user that just follow someone
+    // then we get the latest post from those
+    if (userFeed.length === 0) {
+      console.log("HEEEEEEES");
+
+      const user = await User.findById(req.user.id);
+      if (!user) return next(new ErrorResponse("User not found.", 404));
+
+      for (const followed in user.following) {
+        if (user.following.hasOwnProperty(followed)) {
+          const element = user.following[followed];
+          const posted = await Post.findOne({ user: element });
+          if (!posted) return next(new ErrorResponse("Post not found.", 404));
+          userFeed.push(posted);
+        }
+      }
+    }
     res.status(200).json({
       success: true,
       timeLine: userFeed,
@@ -178,10 +199,28 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
 
   post.likes.liker.push(req.user.id);
   post.likes.count++;
+  ReadCachedUserProfil(req.user.name, null, async (err, user) => {
+    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+    if (user) {
+      let UserProfil = JSON.parse(user);
 
-  post.save();
+      const followers = UserProfil.follower;
+      if (followers) {
+        followers.forEach((follower) => {
+          // Create user's follower hash timeline
 
-  res.status(200).json({ success: true, post });
+          CreateUserTimeLine(follower, post.id, post);
+          if (!userTimeline)
+            return next(new ErrorResponse("Error Caching.", 500));
+        });
+      }
+    } else {
+      const userdb = await User.findById(req.user.id);
+      CacheUserProfil(req.user.name, userdb);
+    }
+    await post.save();
+    res.status(200).json({ success: true, post });
+  });
 });
 
 // // @desc    UnLike A Post
@@ -350,8 +389,3 @@ const moveFileToPosts_pic = (file) => {
     }
   });
 };
-
-// const GetPostHash = (client, userName, next, callback) => {
-//   // Get the user TimeLine from Redis
-
-// };

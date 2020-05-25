@@ -3,12 +3,38 @@ const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const client = require("../utils/redis");
 const path = require("path");
+const {
+  CacheUserProfil,
+  ReadCachedUserProfil,
+} = require("../middleware/redis-func");
 
 // @desc    Get All Users
 // @route   GET /api/v1/auth/user
 // @access  Public
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
   res.status(200).json(res.advancedResults);
+  // client.keys("*UserProfil:*", (err, userProfilsKeys) => {
+  //   if (err) return next(new ErrorResponse("No User Found", 404));
+  //   let users = {};
+  //   console.log("userProfilsKeys", userProfilsKeys);
+  //   if (userProfilsKeys.length == 0 || userProfilsKeys === undefined) {
+  //     res.status(200).json(res.advancedResults);
+  //   }
+  //   for (const userProfil in userProfilsKeys) {
+  //     if (userProfilsKeys.hasOwnProperty(userProfil)) {
+  //       const userKey = userProfilsKeys[userProfil];
+  //       ReadCachedUserProfil(null, userKey, (err, user) => {
+  //         if (err) return next(new ErrorResponse("No User Found", 404));
+  //         console.log("userProfil", userProfil);
+  //         users[userProfil] = JSON.parse(user);
+  //         if (userProfil == userProfilsKeys.length - 1) {
+  //           console.log("userProfil-END", userProfil);
+  //           res.status(200).json({ success: true, users });
+  //         }
+  //       });
+  //     }
+  //   }
+  // });
 });
 
 // @desc    Get A User
@@ -27,7 +53,7 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.FollowUser = asyncHandler(async (req, res, next) => {
   if (req.user.id === req.params.id)
-    return next(new ErrorResponse("User can not follow itself."));
+    return next(new ErrorResponse("User can not follow itself.", 403));
 
   //get the id of the user that we follow
   let followed = await User.findById(req.params.id);
@@ -56,11 +82,7 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
   );
 
   // set the followed user a UserProfil cache
-  const keyfollowedUser = `UserProfil:${followed.userName}`;
-  client.set(keyfollowedUser, JSON.stringify(followed));
-  client.get(keyfollowedUser, (err, followed) =>
-    console.log("followed", followed)
-  );
+  CacheUserProfil(followed.userName, followed);
 
   let user = await User.findByIdAndUpdate(
     req.user.id,
@@ -73,9 +95,8 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
 
   if (!user) return next(new ErrorResponse("User Not Found.", 404));
   // set the follower user a UserProfil cache
-  const keyfollowerUser = `UserProfil:${req.user.name}`;
-  client.set(keyfollowerUser, JSON.stringify(user));
-  client.get(keyfollowerUser, (err, user) => console.log("USER", user));
+  CacheUserProfil(req.user.name, user);
+
   // check if the user exist
 
   res.status(200).json({ success: true, followed, user });
@@ -111,8 +132,7 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
   );
 
   // set the followed user a UserProfil cache
-  const keyfollowedUser = `UserProfil:${unfollowed.name}`;
-  client.set(keyfollowedUser, JSON.stringify(unfollowed));
+  CacheUserProfil(unfollowed.userName, unfollowed);
 
   //delete the unfollowed user to the connected user's following list
   user = await User.findByIdAndUpdate(
@@ -125,9 +145,7 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
   );
 
   // set the follower user a UserProfil cache
-  const keyfollowerUser = `UserProfil:${user.name}`;
-  client.set(keyfollowerUser, JSON.stringify(user));
-
+  CacheUserProfil(user.name, user);
   res.status(200).json({ success: true, unfollowed, user });
 });
 
