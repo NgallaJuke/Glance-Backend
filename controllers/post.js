@@ -100,7 +100,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
         }
       } else {
         // update user own timeline
-        SetUserTimeLine(user.id, post.id);
+        SetUserTimeLine(JSON.parse(user)._id, post.id);
 
         let UserProfil = JSON.parse(user);
         const followers = UserProfil.follower;
@@ -329,12 +329,12 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
     .json({ success: true, post: "The saved post has been deleted." });
 });
 
-/* -----TODO-----*/
+/* -----TODO----- */
 /* 
-  Put hte comments on redis and link like the post are linked to userTimeline
+  Put the comments on redis and link like the post are linked to userTimeline
   Gat all Saved Post by a user
  */
-/* ---------- */
+/* -------------- */
 
 const fileCheck = (file, count, img_url, error) => {
   // make sure the file is an image

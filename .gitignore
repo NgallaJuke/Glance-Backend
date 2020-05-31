@@ -1,4 +1,4 @@
 node_modules/
 config/config.env
 config/whitelist.txt
-.test.js
+test.js
