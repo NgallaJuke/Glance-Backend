@@ -44,8 +44,8 @@ app.use(express.static(path.join(__dirname, "public")));
 
 //use the routes
 app.use("/api/v1/auth/", authRoute);
-app.use("/api/v1/user/", userRoute);
-app.use("/api/v1/post/", postRoute);
+app.use("/api/v1/users/", userRoute);
+app.use("/api/v1/posts/", postRoute);
 
 // Use the Error Handler
 app.use(errorHandler);

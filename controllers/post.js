@@ -8,9 +8,12 @@ const ErrorResponse = require("../utils/errorResponse");
 const client = require("../utils/redis");
 const path = require("path");
 const {
-  CreateUserTimeLine,
-  CacheUserProfil,
-  ReadCachedUserProfil,
+  SetUserTimeLine,
+  SetUserProfil,
+  GetUserProfil,
+  GetUserTimeLine,
+  SetPostsCache,
+  DeletePostsCache,
 } = require("../middleware/redis-func");
 
 // @desc    Create A Post
@@ -61,6 +64,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Error while uploading the photos", 500));
 
   try {
+    // Save the post to the Database
     const post = await Post.create({
       img_url,
       description: req.body.description,
@@ -68,36 +72,42 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       user: req.user.id,
     });
 
+    // Save the post to Redis
+    SetPostsCache(post.id, post);
+
     // send the post to the user's followers timeline
-    let keyCurrentUser = `UserProfil:${req.user.name}`;
-    client.get(keyCurrentUser, async (err, user) => {
-      if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+    client.get(`UserProfil:${req.user.name}`, async (err, user) => {
+      if (err) return next(new ErrorResponse("Server error.", 500));
 
       if (!user) {
+        // if Redis doesn't give bac the user we get him from the database
         const userdb = await User.findById(req.user.id);
+        if (!userdb) return next(new ErrorResponse("User is not found", 404));
 
-        if (!userdb)
-          return next(new ErrorResponse("The User is not found", 404));
+        // update user own timeline
+        SetUserTimeLine(userdb.id, post.id);
 
-        CacheUserProfil(req.user.name, userdb);
+        // Reset the User Profil in Redis in case it was lost
+        SetUserProfil(req.user.name, userdb);
         let UserProfil = JSON.parse(userdb);
 
         const followers = UserProfil.follower;
         if (followers) {
           followers.forEach((follower) => {
-            // Create user's follower hash timeline
-            CreateUserTimeLine(follower, post.id, post);
+            // Update the followers's Timeline
+            SetUserTimeLine(follower, post.id);
           });
         }
       } else {
-        let UserProfil = JSON.parse(user);
+        // update user own timeline
+        SetUserTimeLine(user.id, post.id);
 
+        let UserProfil = JSON.parse(user);
         const followers = UserProfil.follower;
         if (followers) {
           followers.forEach((follower) => {
-            // Create user's follower hash timeline
-
-            CreateUserTimeLine(follower, post.id, post);
+            // Update the followers's Timeline
+            SetUserTimeLine(follower, post.id);
           });
         }
       }
@@ -117,6 +127,7 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("User not authorize to make this request", 401)
     );
+  DeletePostsCache(post.id);
   post.deleteOne();
 
   res.status(200).json({ success: true, post: "the Post has been deleted." });
@@ -144,43 +155,7 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/post/timeline
 // @access  Private
 exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
-  // req.params.id ==userName
-  client.hgetall(`User:${req.user.name}`, async (err, posts) => {
-    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-
-    let userFeed = [];
-    for (const post in posts) {
-      console.log("post", post);
-
-      if (posts.hasOwnProperty(post)) {
-        console.log("post", post);
-        const element = posts[post];
-        console.log("element", element);
-        userFeed.push(JSON.parse(element));
-      }
-    }
-    // if It a new user that just follow someone
-    // then we get the latest post from those
-    if (userFeed.length === 0) {
-      console.log("HEEEEEEES");
-
-      const user = await User.findById(req.user.id);
-      if (!user) return next(new ErrorResponse("User not found.", 404));
-
-      for (const followed in user.following) {
-        if (user.following.hasOwnProperty(followed)) {
-          const element = user.following[followed];
-          const posted = await Post.findOne({ user: element });
-          if (!posted) return next(new ErrorResponse("Post not found.", 404));
-          userFeed.push(posted);
-        }
-      }
-    }
-    res.status(200).json({
-      success: true,
-      timeLine: userFeed,
-    });
-  });
+  GetUserTimeLine(req.user.id, res);
 });
 
 // // @desc    Like A Post
@@ -199,25 +174,18 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
 
   post.likes.liker.push(req.user.id);
   post.likes.count++;
-  ReadCachedUserProfil(req.user.name, null, async (err, user) => {
+
+  //check if somehow the user didn't hace a cahced Profil
+  GetUserProfil(req.user.name, null, async (err, user) => {
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-    if (user) {
-      let UserProfil = JSON.parse(user);
-
-      const followers = UserProfil.follower;
-      if (followers) {
-        followers.forEach((follower) => {
-          // Create user's follower hash timeline
-
-          CreateUserTimeLine(follower, post.id, post);
-          if (!userTimeline)
-            return next(new ErrorResponse("Error Caching.", 500));
-        });
-      }
-    } else {
+    if (!user) {
+      // if the user follows no one yet
       const userdb = await User.findById(req.user.id);
-      CacheUserProfil(req.user.name, userdb);
+      SetUserProfil(req.user.name, userdb);
     }
+
+    // Update the post in Redis
+    SetPostsCache(post.id, post);
     await post.save();
     res.status(200).json({ success: true, post });
   });
@@ -238,6 +206,9 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   post.likes.liker.pull(req.user.id);
   post.likes.count--;
 
+  // Update the post in Redis
+  SetPostsCache(post.id, post);
+  // update on database
   post.save();
 
   res.status(200).json({ success: true, post });
@@ -268,6 +239,8 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Error while creating the comment", 500));
 
   post.comment.push(comment.id);
+  // Update the post in Redis
+  SetPostsCache(post.id, post);
   post.save();
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User Not Found", 404));
@@ -330,7 +303,10 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Post already saved.", 403));
 
   user.saved.push(post.id);
+  // update the user in Database
   user.save();
+  // update the user in Redis
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, post });
 });
 
@@ -344,11 +320,21 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("This post has not been saved.", 404));
 
   user.saved.pull(req.params.id);
+  // update the user in Database
   user.save();
+  // update the user in Redis
+  SetUserProfil(req.user.name, user);
   res
     .status(200)
     .json({ success: true, post: "The saved post has been deleted." });
 });
+
+/* -----TODO-----*/
+/* 
+  Put hte comments on redis and link like the post are linked to userTimeline
+  Gat all Saved Post by a user
+ */
+/* ---------- */
 
 const fileCheck = (file, count, img_url, error) => {
   // make sure the file is an image
