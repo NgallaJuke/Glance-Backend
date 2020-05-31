@@ -14,7 +14,7 @@ const { Protect } = require("../middleware/auth");
 const advancedResults = require("../middleware/advancedResults");
 
 router.route("/").get(advancedResults(User), getAllUsers);
-router.route("/:id").get(GetSingleUser);
+router.route("/:userName").get(GetSingleUser);
 router.route("/:id/follow").put(Protect, FollowUser);
 router.route("/:id/unfollow").put(Protect, UnfollowUser);
 router.route("/:id/block").put(Protect, BlockUser);
