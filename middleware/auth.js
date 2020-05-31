@@ -23,8 +23,6 @@ exports.Protect = asyncHandler(async (req, res, next) => {
   try {
     let decoded = jwt.decode(token, { complete: true });
 
-    console.log(decoded.payload);
-
     if (
       decoded.header.alg === "none" ||
       decoded.header.alg !== "HS256" ||
@@ -52,20 +50,14 @@ exports.Protect = asyncHandler(async (req, res, next) => {
     if (!whitelist.includes(decoded.payload.jti))
       return next(new ErrorResponse("Connect to access this route", 401));
 
-    // const user = await User.findById(decoded.payload.sub);
-    // if (!user) return next(new ErrorResponse("User not found.", 404));
-
-    // if (
-    //   !user.jti ||
-    //   user.jti === undefined ||
-    //   user.jti === null ||
-    //   decoded.payload.jti !== user.jti
-    // )
-
     // verify the token
     const validToken = jwt.verify(token, process.env.JWT_SCRT);
     if (!validToken) return next(new ErrorResponse("Token Unvalid.", 401));
-    req.user = { id: decoded.payload.sub, role: decoded.payload.role };
+    req.user = {
+      id: decoded.payload.sub,
+      role: decoded.payload.role,
+      name: decoded.payload.name,
+    };
     next();
   } catch (error) {
     return next(new ErrorResponse("An Error Occured", 500));

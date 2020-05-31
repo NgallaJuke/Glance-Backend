@@ -5,7 +5,16 @@ const Comment = require("../models/Comment");
 const ObjectId = require("mongoose").Types.ObjectId;
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
+const client = require("../utils/redis");
 const path = require("path");
+const {
+  SetUserTimeLine,
+  SetUserProfil,
+  GetUserProfil,
+  GetUserTimeLine,
+  SetPostsCache,
+  DeletePostsCache,
+} = require("../middleware/redis-func");
 
 // @desc    Create A Post
 // @route   GET /api/v1/post/create
@@ -53,13 +62,60 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 
   if (img_url.length === 0)
     return next(new ErrorResponse("Error while uploading the photos", 500));
-  const post = await Post.create({
-    img_url,
-    description: req.body.description,
-    tags,
-    user: req.user.id,
-  });
-  res.status(200).json({ success: true, post: post });
+
+  try {
+    // Save the post to the Database
+    const post = await Post.create({
+      img_url,
+      description: req.body.description,
+      tags,
+      user: req.user.id,
+    });
+
+    // Save the post to Redis
+    SetPostsCache(post.id, post);
+
+    // send the post to the user's followers timeline
+    client.get(`UserProfil:${req.user.name}`, async (err, user) => {
+      if (err) return next(new ErrorResponse("Server error.", 500));
+
+      if (!user) {
+        // if Redis doesn't give bac the user we get him from the database
+        const userdb = await User.findById(req.user.id);
+        if (!userdb) return next(new ErrorResponse("User is not found", 404));
+
+        // update user own timeline
+        SetUserTimeLine(userdb.id, post.id);
+
+        // Reset the User Profil in Redis in case it was lost
+        SetUserProfil(req.user.name, userdb);
+        let UserProfil = JSON.parse(userdb);
+
+        const followers = UserProfil.follower;
+        if (followers) {
+          followers.forEach((follower) => {
+            // Update the followers's Timeline
+            SetUserTimeLine(follower, post.id);
+          });
+        }
+      } else {
+        // update user own timeline
+        SetUserTimeLine(JSON.parse(user)._id, post.id);
+
+        let UserProfil = JSON.parse(user);
+        const followers = UserProfil.follower;
+        if (followers) {
+          followers.forEach((follower) => {
+            // Update the followers's Timeline
+            SetUserTimeLine(follower, post.id);
+          });
+        }
+      }
+    });
+    res.status(200).json({ success: true, post: post });
+  } catch (error) {
+    console.log("Error", error);
+  }
 });
 
 // @desc    Delete A Post
@@ -71,6 +127,7 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("User not authorize to make this request", 401)
     );
+  DeletePostsCache(post.id);
   post.deleteOne();
 
   res.status(200).json({ success: true, post: "the Post has been deleted." });
@@ -80,7 +137,9 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/post
 // @access  Public
 exports.getAllPosts = asyncHandler(async (req, res, next) => {
-  res.status(200).json(res.advancedResults);
+  const post = await Post.find();
+  if (!post) return next(new ErrorResponse("Posts not found. ", 404));
+  res.status(200).json({ success: true, post });
 });
 
 // @desc    Get A Post
@@ -93,16 +152,10 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get The User Connected Posts
-// @route   GET /api/v1/post/:userName
-// @access  Public
-exports.GetPostByUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findOne({ userName: req.params.userName });
-
-  if (!user) return next(new ErrorResponse("User not found", 404));
-  const post = await Post.find({ user: user.id });
-  if (!post) return next(new ErrorResponse("Post not found", 404));
-
-  res.status(200).json({ success: true, post });
+// @route   GET /api/v1/post/timeline
+// @access  Private
+exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
+  GetUserTimeLine(req.user.id, res);
 });
 
 // // @desc    Like A Post
@@ -122,9 +175,20 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   post.likes.liker.push(req.user.id);
   post.likes.count++;
 
-  post.save();
+  //check if somehow the user didn't hace a cahced Profil
+  GetUserProfil(req.user.name, null, async (err, user) => {
+    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+    if (!user) {
+      // if the user follows no one yet
+      const userdb = await User.findById(req.user.id);
+      SetUserProfil(req.user.name, userdb);
+    }
 
-  res.status(200).json({ success: true, post });
+    // Update the post in Redis
+    SetPostsCache(post.id, post);
+    await post.save();
+    res.status(200).json({ success: true, post });
+  });
 });
 
 // // @desc    UnLike A Post
@@ -142,6 +206,9 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   post.likes.liker.pull(req.user.id);
   post.likes.count--;
 
+  // Update the post in Redis
+  SetPostsCache(post.id, post);
+  // update on database
   post.save();
 
   res.status(200).json({ success: true, post });
@@ -172,6 +239,8 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Error while creating the comment", 500));
 
   post.comment.push(comment.id);
+  // Update the post in Redis
+  SetPostsCache(post.id, post);
   post.save();
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User Not Found", 404));
@@ -234,7 +303,10 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Post already saved.", 403));
 
   user.saved.push(post.id);
+  // update the user in Database
   user.save();
+  // update the user in Redis
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, post });
 });
 
@@ -248,11 +320,21 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("This post has not been saved.", 404));
 
   user.saved.pull(req.params.id);
+  // update the user in Database
   user.save();
+  // update the user in Redis
+  SetUserProfil(req.user.name, user);
   res
     .status(200)
     .json({ success: true, post: "The saved post has been deleted." });
 });
+
+/* -----TODO----- */
+/* 
+  Put the comments on redis and link like the post are linked to userTimeline
+  Gat all Saved Post by a user
+ */
+/* -------------- */
 
 const fileCheck = (file, count, img_url, error) => {
   // make sure the file is an image

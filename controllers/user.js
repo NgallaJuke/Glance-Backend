@@ -2,38 +2,46 @@ const User = require("../models/User");
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
+const { SetUserProfil, GetUserProfil } = require("../middleware/redis-func");
 
 // @desc    Get All Users
-// @route   GET /api/v1/auth/user
+// @route   GET /api/v1/auth/users
 // @access  Public
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
   res.status(200).json(res.advancedResults);
 });
 
 // @desc    Get A User
-// @route   GET /api/v1/auth/user/:id
+// @route   GET /api/v1/auth/user/:userName
 // @access  Public
 exports.GetSingleUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
-  if (!user) {
-    return next(new ErrorResponse("User not found", 404));
-  }
-  res.status(200).json({ success: true, user });
+  GetUserProfil(req.params.userName, async (err, user) => {
+    if (err) return next(err);
+
+    if (user) {
+      res.status(200).json({ success: true, user: JSON.parse(user) });
+    } else {
+      const userdb = await User.findById(req.params.id);
+      if (!userdb) {
+        return next(new ErrorResponse("User not found in DB.", 404));
+      }
+      res.status(200).json({ success: true, user });
+    }
+  });
 });
 
 // @desc    Follow a User
-// @route   PUT /api/v1/user/:id/follow
+// @route   PUT /api/v1/users/:id/follow
 // @access  Private
 exports.FollowUser = asyncHandler(async (req, res, next) => {
   if (req.user.id === req.params.id)
-    return next(new ErrorResponse("User can not follow itself."));
+    return next(new ErrorResponse("User can not follow itself.", 403));
 
   //get the id of the user that we follow
   let followed = await User.findById(req.params.id);
 
   if (!followed)
     return next(new ErrorResponse("Followed user not found.", 404));
-  console.log("followed.follower", followed.follower.length);
 
   if (
     followed.follower.filter((follower) => follower.toString() === req.user.id)
@@ -55,6 +63,9 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   );
 
+  // set the followed user a UserProfil cache
+  SetUserProfil(followed.userName, followed);
+
   let user = await User.findByIdAndUpdate(
     req.user.id,
     { $push: { following: req.params.id } },
@@ -64,14 +75,17 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
     }
   );
 
-  // check if the user exist
   if (!user) return next(new ErrorResponse("User Not Found.", 404));
+  // set the follower user a UserProfil cache
+  SetUserProfil(req.user.name, user);
+
+  // check if the user exist
 
   res.status(200).json({ success: true, followed, user });
 });
 
 // @desc    Unfollow a User
-// @route   PUT /api/v1/user/:id/unfollow
+// @route   PUT /api/v1/users/:id/unfollow
 // @access  Private
 exports.UnfollowUser = asyncHandler(async (req, res, next) => {
   if (req.user.id === req.params.id)
@@ -99,6 +113,9 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   );
 
+  // set the followed user a UserProfil cache
+  SetUserProfil(unfollowed.userName, unfollowed);
+
   //delete the unfollowed user to the connected user's following list
   user = await User.findByIdAndUpdate(
     req.user.id,
@@ -108,11 +125,14 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
       runValidators: true,
     }
   );
+
+  // set the follower user a UserProfil cache
+  SetUserProfil(user.name, user);
   res.status(200).json({ success: true, unfollowed, user });
 });
 
 // @desc    Block a User
-// @route   PUT /api/v1/user/:id/block
+// @route   PUT /api/v1/users/:id/block
 // @access  Private
 exports.BlockUser = asyncHandler(async (req, res, next) => {
   if (req.user.id === req.params.id)
@@ -143,6 +163,7 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
 
     { new: true, runValidators: true }
   );
+  SetUserProfil(blocked.userName, user);
 
   user = await User.findByIdAndUpdate(
     req.user.id,
@@ -154,11 +175,12 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
 
     { new: true, runValidators: true }
   );
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, blocked, user });
 });
 
 // @desc    Unblock a User
-// @route   PUT /api/v1/user/:id/unblock
+// @route   PUT /api/v1/users/:id/unblock
 // @access  Private
 exports.UnblockUser = asyncHandler(async (req, res, next) => {
   if (req.user.id === req.params.id)
@@ -185,12 +207,13 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
     { $pull: { blockedBy: req.user.id } },
     { new: true, runValidators: true }
   );
-
+  SetUserProfil(blocked.userName, user);
   user = await User.findByIdAndUpdate(
     req.user.id,
     { $pull: { blocked: req.params.id } },
     { new: true, runValidators: true }
   );
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, blocked, user });
 });
 
@@ -207,6 +230,7 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
     new: true,
     runValidators: true,
   });
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, user });
 });
 
@@ -260,5 +284,6 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
     );
   });
 
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, user });
 });

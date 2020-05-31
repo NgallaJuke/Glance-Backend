@@ -6,6 +6,11 @@ const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const {
+  SetUserProfil,
+  GetUserProfil,
+  DeleteUserProfil,
+} = require("../middleware/redis-func");
 
 // @desc    Register User
 // @route   POST /api/v1/auth/register
@@ -28,6 +33,9 @@ exports.Register = asyncHandler(async (req, res) => {
       new ErrorResponse("Internal Error while creating the user", 500)
     );
 
+  // Set the UserProfile in the cache
+  SetUserProfil(userName, user);
+
   // create the mail : message and the url to redirect the user
   const fakeToken = user.getRegisterToken();
   await user.save({ validateBeforeSave: false });
@@ -47,13 +55,11 @@ exports.Register = asyncHandler(async (req, res) => {
     console.log(error);
     next(new ErrorResponse("Email couldn't be sent ", 500));
   }
-
-  // SendTokentoCookieResponse(user, 200, res);
 });
 
 // @desc    Confirm User Registration
 // @route   PUT /api/v1/auth/confirm-register/:fakeToken
-// @access  Public
+// @access  Private
 exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   // get hashed token
   const RegisterToken = crypto
@@ -81,6 +87,9 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   // save the user
   await user.save();
 
+  // reset the UserProfile in Redis
+  SetUserProfil(user.userName, user);
+
   SendTokentoCookieResponse(user, 200, res);
 });
 
@@ -89,6 +98,7 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.deleteUser = asyncHandler(async (req, res, next) => {
   const user = await User.findByIdAndDelete(req.user.id);
+  DeleteUserProfil(req.user.name);
   res.status(200).json({ success: true, data: {} });
 });
 
@@ -163,11 +173,19 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-  if (!user) return next(new ErrorResponse("The User is not found", 404));
+  GetUserProfil(req.user.name, null, async (err, user) => {
+    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
 
-  // get resset token
-  res.status(200).json({ success: true, data: user });
+    // if the user profil is not in Redis then get it from the database
+    if (!user) {
+      const user = await User.findById(req.user.id);
+      if (!user) return next(new ErrorResponse("The User is not found", 404));
+      res.status(200).json({ success: true, user });
+      return;
+    }
+    let UserProfil = JSON.parse(user);
+    res.status(200).json({ success: true, UserProfil });
+  });
 });
 
 // @desc    Forgot Password
@@ -229,6 +247,9 @@ exports.ResetPassword = asyncHandler(async (req, res, next) => {
 
   // save the user
   await user.save();
+
+  // reset the UserProfile in Redis
+  SetUserProfil(userName, user);
 
   SendTokentoCookieResponse(user, 200, res);
 });
