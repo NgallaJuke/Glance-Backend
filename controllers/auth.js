@@ -16,6 +16,8 @@ const {
 // @route   POST /api/v1/auth/register
 // @access  Public
 exports.Register = asyncHandler(async (req, res) => {
+  console.log("req.body", req.body);
+
   // get this variable from the req.body = form registration
   const { email, firstName, lastName, userName, role, password } = req.body;
 
@@ -42,8 +44,16 @@ exports.Register = asyncHandler(async (req, res) => {
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/api/v1/auth/confirm-register/${fakeToken}`;
-
-  const message = `PLease confirm you registration by making a PUT request to this URL.\n\n ${resetURL}`;
+  console.log("resetURL", resetURL);
+  const message = `
+  <h2>PLease confirm you registration by making a PUT request to this URL.</h2>\n
+  <form
+      action="${resetURL}"
+      method="post"
+    >
+      <input type="submit" />
+    </form>
+  `;
   try {
     await sendEmail({
       email: email,
@@ -125,7 +135,7 @@ exports.Login = asyncHandler(async (req, res, next) => {
   user.jti = crypto.randomBytes(20).toString("hex");
 
   await user.save();
-
+  SetUserProfil(user.userName, user);
   let stream = fs.createWriteStream(
     path.join(__dirname, "../config/whitelist.txt"),
     { flags: "a" }
@@ -152,10 +162,7 @@ exports.Logout = asyncHandler(async (req, res, next) => {
   );
   console.log("Whitelist", whitelist);
   if (whitelist.includes(user.jti)) {
-    console.log("Logout User", user.jti);
     let newWhitelist = whitelist.replace(user.jti, "");
-    console.log("newWhitelist", newWhitelist);
-
     fs.writeFileSync(
       path.join(__dirname, "../config/whitelist.txt"),
       newWhitelist,
@@ -173,7 +180,9 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  GetUserProfil(req.user.name, null, async (err, user) => {
+  console.log("USERNAME", req.user.name);
+
+  GetUserProfil(req.user.name, async (err, user) => {
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
 
     // if the user profil is not in Redis then get it from the database
@@ -275,5 +284,6 @@ const SendTokentoCookieResponse = async (user, status, res) => {
   res
     .status(status)
     .cookie("token", token, options)
+    .header("Authorization", "Bearer " + token)
     .json({ success: true, token });
 };

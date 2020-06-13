@@ -9,10 +9,22 @@ const fileupload = require("express-fileupload");
 const bodyParser = require("body-parser");
 const cookie_parser = require("cookie-parser");
 const socketio = require("socket.io");
-
+const cors = require("cors");
+const methodOverride = require("method-override");
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
+
+//allow cors
+app.use(
+  cors({
+    credentials: true,
+    origin: ["http://localhost:8080"],
+  })
+);
+
+// userMethodeOverride to accepte PUT and DELETE methode in form
+app.use(methodOverride("_method"));
 
 //require env variables
 dotenv.config({ path: "./config/config.env" });
