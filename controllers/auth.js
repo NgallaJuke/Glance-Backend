@@ -16,15 +16,11 @@ const {
 // @route   POST /api/v1/auth/register
 // @access  Public
 exports.Register = asyncHandler(async (req, res) => {
-  console.log("req.body", req.body);
-
   // get this variable from the req.body = form registration
-  const { email, firstName, lastName, userName, role, password } = req.body;
+  const { email, userName, role, password } = req.body;
 
   const user = await User.create({
     email,
-    firstName,
-    lastName,
     userName,
     role,
     password,
@@ -160,7 +156,7 @@ exports.Logout = asyncHandler(async (req, res, next) => {
     path.join(__dirname, "../config/whitelist.txt"),
     "utf8"
   );
-  console.log("Whitelist", whitelist);
+
   if (whitelist.includes(user.jti)) {
     let newWhitelist = whitelist.replace(user.jti, "");
     fs.writeFileSync(
@@ -285,5 +281,5 @@ const SendTokentoCookieResponse = async (user, status, res) => {
     .status(status)
     .cookie("token", token, options)
     .header("Authorization", "Bearer " + token)
-    .json({ success: true, token });
+    .json({ success: true, token, user });
 };

@@ -14,18 +14,6 @@ const UserSchema = new mongoose.Schema({
       "Please add a valid email",
     ],
   },
-  firstName: {
-    type: String,
-    maxlength: 30,
-    required: [true, "Please add your firstname"],
-    match: [/^[a-zA-Z]+([ ]?[a-zA-Z])*$/, "First ame Unvalid"],
-  },
-  lastName: {
-    type: String,
-    maxlength: 30,
-    required: [true, "Please add your lastName"],
-    match: [/^[a-zA-Z]*$/, "Last ame Unvalid"],
-  },
   userName: {
     type: String,
     maxlength: 30,
