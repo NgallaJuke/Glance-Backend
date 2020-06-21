@@ -176,8 +176,6 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  console.log("USERNAME", req.user.name);
-
   GetUserProfil(req.user.name, async (err, user) => {
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
 
@@ -281,5 +279,5 @@ const SendTokentoCookieResponse = async (user, status, res) => {
     .status(status)
     .cookie("token", token, options)
     .header("Authorization", "Bearer " + token)
-    .json({ success: true, token, user });
+    .json({ success: true, token });
 };
