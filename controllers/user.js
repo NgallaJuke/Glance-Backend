@@ -264,15 +264,16 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
       )
     );
 
-  // Create costunme file name
-  file.name = `avatar_${Date.now()}${path.parse(file.name).ext}`;
+  // Create costume file name
+  file.name = `avatar_${req.user.name}_${Date.now()}${
+    path.parse(file.name).ext
+  }`;
 
-  // move the file
+  // move the file in public/avatars
   file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
     if (err) {
       return next(new ErrorResponse("Probleme while uploading the file", 500));
     }
-
     // insert the filemane in the database
     user = await User.findByIdAndUpdate(
       req.user.id,
@@ -282,8 +283,8 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
         runValidators: true,
       }
     );
-  });
 
-  SetUserProfil(req.user.name, user);
+    SetUserProfil(req.user.name, user);
+  });
   res.status(200).json({ success: true, user });
 });

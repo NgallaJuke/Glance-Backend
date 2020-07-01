@@ -169,7 +169,7 @@ exports.Logout = asyncHandler(async (req, res, next) => {
   // delete the jit token secret in the user document
   user.jti = undefined;
   await user.save();
-  res.status(200).json({ success: true, user, message: "User Logged Out." });
+  res.status(200).json({ success: true, message: "User Logged Out." });
 });
 
 // @desc    Get Current Logged User
@@ -177,13 +177,17 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
   GetUserProfil(req.user.name, async (err, user) => {
+    console.log("USERiD", req.user.id);
+
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
 
-    // if the user profil is not in Redis then get it from the database
+    // if the user profil is not in cache then get it from the database
+    // and set the user in cache
     if (!user) {
       const user = await User.findById(req.user.id);
       if (!user) return next(new ErrorResponse("The User is not found", 404));
-      res.status(200).json({ success: true, user });
+      SetUserProfil(user.userName, user);
+      res.status(200).json({ success: true, UserProfil: user });
       return;
     }
     let UserProfil = JSON.parse(user);
@@ -252,7 +256,7 @@ exports.ResetPassword = asyncHandler(async (req, res, next) => {
   await user.save();
 
   // reset the UserProfile in Redis
-  SetUserProfil(userName, user);
+  SetUserProfil(user.userName, user);
 
   SendTokentoCookieResponse(user, 200, res);
 });
