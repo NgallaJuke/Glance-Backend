@@ -20,26 +20,26 @@ const {
 // @route   GET /api/v1/post/create
 // @access  Private/Tailors
 exports.CreatePost = asyncHandler(async (req, res, next) => {
-  let img_url = [];
+  let picture = [];
   let files = [];
   let error = "";
 
-  if (!req.files || Array.from(req.files.img_url).length < 0) {
+  if (!req.files || Array.from(req.files.picture).length < 0) {
     return next(new ErrorResponse("Please add a photo", 400));
   }
 
   // if there is only one file
-  if (Array.from(req.files.img_url).length === 0) {
-    const file = req.files.img_url;
-    fileCheck(file, (count = 0), img_url, error);
+  if (Array.from(req.files.picture).length === 0) {
+    const file = req.files.picture;
+    fileCheck(req.user.name, file, (count = 0), picture, error);
     if (error) return console.log("Error :", error);
     // move the file
     moveFileToPosts_pic(file);
   } else {
     let count = 0;
     // save the files image
-    Array.from(req.files.img_url).forEach((file) => {
-      fileCheck(file, count, img_url, error);
+    Array.from(req.files.picture).forEach((file) => {
+      fileCheck(req.user.name, file, count, picture, error);
       count++;
       // move the file
       files.push(file);
@@ -60,13 +60,13 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     tags = req.body.description.match(reg);
   }
 
-  if (img_url.length === 0)
+  if (picture.length === 0)
     return next(new ErrorResponse("Error while uploading the photos", 500));
 
   try {
     // Save the post to the Database
     const post = await Post.create({
-      img_url,
+      picture,
       description: req.body.description,
       tags,
       user: req.user.id,
@@ -155,7 +155,7 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/post/timeline
 // @access  Private
 exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
-  GetUserTimeLine(req.user.id, res);
+  GetUserTimeLine(req.user.id, res, next);
 });
 
 // // @desc    Like A Post
@@ -336,7 +336,7 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
  */
 /* -------------- */
 
-const fileCheck = (file, count, img_url, error) => {
+const fileCheck = (userName, file, count, picture, error) => {
   // make sure the file is an image
   if (!file.mimetype.startsWith("image")) {
     error = new ErrorResponse("Please upload an image file", 403);
@@ -347,11 +347,7 @@ const fileCheck = (file, count, img_url, error) => {
     error = new ErrorResponse("Gif image is not allow", 403);
     return next(error);
   }
-  // make sure the image is not a png
-  if (file.mimetype === "image/png") {
-    error = new ErrorResponse("PNG image is not allow", 403);
-    return next(error);
-  }
+
   // check file size
   if (file.size > process.env.MAX_PIC_SIZE) {
     error = new ErrorResponse(
@@ -362,8 +358,10 @@ const fileCheck = (file, count, img_url, error) => {
   }
 
   // Create costum file name
-  file.name = `post_img[${count}]_${Date.now()}${path.parse(file.name).ext}`;
-  img_url.push(file.name);
+  file.name = `post_img[${count}]_${userName}_${Date.now()}${
+    path.parse(file.name).ext
+  }`;
+  picture.push(file.name);
 };
 
 const moveFileToPosts_pic = (file) => {

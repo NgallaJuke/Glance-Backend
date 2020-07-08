@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const PostSchema = new mongoose.Schema({
-  img_url: [{ type: String, require: [true, "Please add photo"] }],
+  picture: [{ type: String, require: [true, "Please add photo"] }],
   description: {
     type: String,
     maxlength: 180,

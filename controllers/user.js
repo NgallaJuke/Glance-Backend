@@ -19,13 +19,13 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
     if (err) return next(err);
 
     if (user) {
-      res.status(200).json({ success: true, user: JSON.parse(user) });
+      res.status(200).json({ success: true, UserProfil: JSON.parse(user) });
     } else {
       const userdb = await User.findById(req.params.id);
       if (!userdb) {
         return next(new ErrorResponse("User not found in DB.", 404));
       }
-      res.status(200).json({ success: true, user });
+      res.status(200).json({ success: true, UserProfil: user });
     }
   });
 });
@@ -218,7 +218,7 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Update a User
-// @route   PUT /api/v1/auth/user/update
+// @route   PUT /api/v1/user/update
 // @access  Private
 exports.UpdateUser = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);
@@ -235,56 +235,118 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    User Change Profile Picture
-// @route   PUT /api/v1/auth/user/update-avatar
+// @route   PUT /api/v1/user/update-avatar
 // @access  Private
 exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
-  let user = await User.findById(req.user.id);
-  if (!user) {
-    return next(new ErrorResponse("Access not authorize", 401));
-  }
-  if (!req.files) {
-    return next(new ErrorResponse("Please add a photo", 400));
-  }
+  console.log("UserName", req.user.name);
 
-  const file = req.files.file;
+  GetUserProfil(req.user.name, async (err, user) => {
+    if (err) return next(err);
 
-  // make sure the file is an image
-  if (!file.mimetype.startsWith("image"))
-    return next(new ErrorResponse("Please upload an image file", 403));
-  // make sure the image is not an gif
-  if (file.mimetype === "image/gif")
-    return next(new ErrorResponse("Gif image are not allow", 403));
-
-  // check file size
-  if (file.size > process.env.MAX_PIC_SIZE)
-    return next(
-      new ErrorResponse(
-        `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
-        400
-      )
-    );
-
-  // Create costume file name
-  file.name = `avatar_${req.user.name}_${Date.now()}${
-    path.parse(file.name).ext
-  }`;
-
-  // move the file in public/avatars
-  file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
-    if (err) {
-      return next(new ErrorResponse("Probleme while uploading the file", 500));
-    }
-    // insert the filemane in the database
-    user = await User.findByIdAndUpdate(
-      req.user.id,
-      { avatar: path.join(__dirname + `../../public/avatars/${file.name}`) },
-      {
-        new: true,
-        runValidators: true,
+    if (user) {
+      if (!req.files) {
+        return next(new ErrorResponse("Please add a photo", 400));
       }
-    );
 
-    SetUserProfil(req.user.name, user);
+      const file = req.files.file;
+
+      // make sure the file is an image
+      if (!file.mimetype.startsWith("image"))
+        return next(new ErrorResponse("Please upload an image file", 403));
+      // make sure the image is not an gif
+      if (file.mimetype === "image/gif")
+        return next(new ErrorResponse("Gif image are not allow", 403));
+
+      // check file size
+      if (file.size > process.env.MAX_PIC_SIZE)
+        return next(
+          new ErrorResponse(
+            `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
+            400
+          )
+        );
+
+      // Create costume file name
+      file.name = `avatar_${req.user.name}_${Date.now()}${
+        path.parse(file.name).ext
+      }`;
+
+      // move the file in public/avatars
+      file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
+        if (err) {
+          return next(
+            new ErrorResponse("Probleme while uploading the file", 500)
+          );
+        }
+        // insert the filemane in the database
+        user = await User.findByIdAndUpdate(
+          req.user.id,
+          {
+            avatar: path.join(__dirname + `../../public/avatars/${file.name}`),
+          },
+          {
+            new: true,
+            runValidators: true,
+          }
+        );
+
+        SetUserProfil(req.user.name, user);
+        res.status(200).json({ success: true, user });
+      });
+    } else {
+      const userdb = await User.findById(req.user.id);
+      if (!userdb) {
+        return next(new ErrorResponse("User not found in DB.", 404));
+      }
+      if (!req.files) {
+        return next(new ErrorResponse("Please add a photo", 400));
+      }
+
+      const file = req.files.file;
+
+      // make sure the file is an image
+      if (!file.mimetype.startsWith("image"))
+        return next(new ErrorResponse("Please upload an image file", 403));
+      // make sure the image is not an gif
+      if (file.mimetype === "image/gif")
+        return next(new ErrorResponse("Gif image are not allow", 403));
+
+      // check file size
+      if (file.size > process.env.MAX_PIC_SIZE)
+        return next(
+          new ErrorResponse(
+            `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
+            400
+          )
+        );
+
+      // Create costume file name
+      file.name = `avatar_${req.user.name}_${Date.now()}${
+        path.parse(file.name).ext
+      }`;
+
+      // move the file in public/avatars
+      file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
+        if (err) {
+          return next(
+            new ErrorResponse("Probleme while uploading the file", 500)
+          );
+        }
+        // insert the filemane in the database
+        user = await User.findByIdAndUpdate(
+          req.user.id,
+          {
+            avatar: path.join(__dirname + `../../public/avatars/${file.name}`),
+          },
+          {
+            new: true,
+            runValidators: true,
+          }
+        );
+
+        SetUserProfil(req.user.name, user);
+        res.status(200).json({ success: true, user });
+      });
+    }
   });
-  res.status(200).json({ success: true, user });
 });

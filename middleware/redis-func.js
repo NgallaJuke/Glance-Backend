@@ -1,12 +1,15 @@
 const client = require("../utils/redis");
+const ErrorResponse = require("../utils/errorResponse");
 
 exports.SetUserTimeLine = (userID, postID) => {
   client.hset(`UserFeeds:${userID}`, `Post:${postID}`, postID);
 };
 
-exports.GetUserTimeLine = (userID, res) => {
+exports.GetUserTimeLine = (userID, res, next) => {
   client.hgetall(`UserFeeds:${userID}`, async (err, posts) => {
     if (err) return next(new ErrorResponse("Error get UserFeed.", 500));
+    if (posts === null || posts === undefined)
+      return next(new ErrorResponse("HomeTime is empty.", 404));
     let userTimeline = [];
     let i = 0;
     for (const postId in posts) {
@@ -16,9 +19,7 @@ exports.GetUserTimeLine = (userID, res) => {
         client.hget("Posts", `PostId:${element}`, (err, post) => {
           if (err)
             return next(new ErrorResponse("Error get Cached post.", 500));
-
           userTimeline.push(JSON.parse(post));
-
           if (userTimeline.length === i)
             res.status(200).json({
               success: true,
