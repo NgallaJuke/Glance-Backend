@@ -1,11 +1,11 @@
 const client = require("../utils/redis");
 const ErrorResponse = require("../utils/errorResponse");
 
-exports.SetUserTimeLine = (userID, postID) => {
+exports.SetUserFeed = (userID, postID) => {
   client.hset(`UserFeeds:${userID}`, `Post:${postID}`, postID);
 };
 
-exports.GetUserTimeLine = (userID, res, next) => {
+exports.GetUserFeed = (userID, res, next) => {
   client.hgetall(`UserFeeds:${userID}`, async (err, posts) => {
     if (err) return next(new ErrorResponse("Error get UserFeed.", 500));
     if (posts === null || posts === undefined)
@@ -31,14 +31,44 @@ exports.GetUserTimeLine = (userID, res, next) => {
   });
 };
 
-exports.SetPostsCache = (postID, post) => {
+exports.SetUserHomeFeed = (userID, postID) => {
+  client.hset(`UserHomeFeeds:${userID}`, `Post:${postID}`, postID);
+};
+
+exports.GetUserHomeFeed = (userID, res, next) => {
+  client.hgetall(`UserHomeFeeds:${userID}`, async (err, posts) => {
+    if (err) return next(new ErrorResponse("Error get UserFeed.", 500));
+    if (posts === null || posts === undefined)
+      return next(new ErrorResponse("HomeTime is empty.", 404));
+    let userHomeFeed = [];
+    let i = 0;
+    for (const postId in posts) {
+      i++;
+      if (posts.hasOwnProperty(postId)) {
+        const element = posts[postId];
+        client.hget("Posts", `PostId:${element}`, (err, post) => {
+          if (err)
+            return next(new ErrorResponse("Error get Cached post.", 500));
+          userHomeFeed.push(JSON.parse(post));
+          if (userHomeFeed.length === i)
+            res.status(200).json({
+              success: true,
+              userHomeFeed,
+            });
+        });
+      }
+    }
+  });
+};
+
+exports.SetPostCache = (postID, post) => {
   const postKey = `PostId:${postID}`;
   client.hset("Posts", postKey, JSON.stringify(post), (err) => {
     if (err) return err;
   });
 };
 
-exports.GetPostsCache = (postID, callback) => {
+exports.GetPostCache = (postID, callback) => {
   client.hget("Posts", `PostId:${postID}`, callback);
 };
 
@@ -47,13 +77,17 @@ exports.DeletePostsCache = (postID) => {
   client.hdel("Posts", postKey);
 };
 
+exports.GetUserProfil = (userName, callback) => {
+  client.get(`UserProfil:${userName}`, callback);
+};
+
 exports.SetUserProfil = (userName, user) => {
   const userKey = `UserProfil:${userName}`;
   client.set(userKey, JSON.stringify(user));
 };
 
-exports.GetUserProfil = (userName, callback) => {
-  client.get(`UserProfil:${userName}`, callback);
+exports.GetAllUserProfil = (callback) => {
+  client.KEYS("*UserProfil*", callback);
 };
 
 exports.DeleteUserProfil = (userName) => {

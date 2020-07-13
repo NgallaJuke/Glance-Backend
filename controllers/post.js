@@ -8,11 +8,14 @@ const ErrorResponse = require("../utils/errorResponse");
 const client = require("../utils/redis");
 const path = require("path");
 const {
-  SetUserTimeLine,
+  SetUserFeed,
+  SetUserHomeFeed,
+  GetUserHomeFeed,
   SetUserProfil,
   GetUserProfil,
-  GetUserTimeLine,
-  SetPostsCache,
+  GetUserFeed,
+  SetPostCache,
+  GetPostCache,
   DeletePostsCache,
 } = require("../middleware/redis-func");
 
@@ -73,7 +76,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     });
 
     // Save the post to Redis
-    SetPostsCache(post.id, post);
+    SetPostCache(post.id, post);
 
     // send the post to the user's followers timeline
     client.get(`UserProfil:${req.user.name}`, async (err, user) => {
@@ -83,31 +86,31 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
         // if Redis doesn't give bac the user we get him from the database
         const userdb = await User.findById(req.user.id);
         if (!userdb) return next(new ErrorResponse("User is not found", 404));
-
         // update user own timeline
-        SetUserTimeLine(userdb.id, post.id);
-
+        SetUserFeed(userdb.id, post.id);
+        // upadate the user homefeed
+        SetUserHomeFeed(userdb.id, post.id);
         // Reset the User Profil in Redis in case it was lost
         SetUserProfil(req.user.name, userdb);
         let UserProfil = JSON.parse(userdb);
-
         const followers = UserProfil.follower;
         if (followers) {
           followers.forEach((follower) => {
             // Update the followers's Timeline
-            SetUserTimeLine(follower, post.id);
+            SetUserFeed(follower, post.id);
           });
         }
       } else {
         // update user own timeline
-        SetUserTimeLine(JSON.parse(user)._id, post.id);
-
+        SetUserFeed(JSON.parse(user)._id, post.id);
+        // upadate the user homefeed
+        SetUserHomeFeed(JSON.parse(user)._id, post.id);
         let UserProfil = JSON.parse(user);
         const followers = UserProfil.follower;
         if (followers) {
           followers.forEach((follower) => {
             // Update the followers's Timeline
-            SetUserTimeLine(follower, post.id);
+            SetUserFeed(follower, post.id);
           });
         }
       }
@@ -146,16 +149,32 @@ exports.getAllPosts = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/post/:id
 // @access  Public
 exports.GetSinglePost = asyncHandler(async (req, res, next) => {
-  const post = await Post.findById(req.params.id);
-  if (!post) return next(new ErrorResponse("Post not found", 404));
-  res.status(200).json({ success: true, post });
+  GetPostCache(req.params.id, async (err, post) => {
+    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
+    if (!post) {
+      //get teh post from teh db
+      const post = await Post.findById(req.params.id);
+      if (!post) return next(new ErrorResponse("Post not found", 404));
+      //create the post in Posts Cache
+      SetPostCache(req.params.id, post);
+      res.status(200).json({ success: true, post });
+    }
+    res.status(200).json({ success: true, post });
+  });
 });
 
-// @desc    Get The User Connected Posts
+// @desc    Get User's Feed
 // @route   GET /api/v1/post/timeline
 // @access  Private
-exports.GetUserTimeline = asyncHandler(async (req, res, next) => {
-  GetUserTimeLine(req.user.id, res, next);
+exports.GetUserFeed = asyncHandler(async (req, res, next) => {
+  GetUserFeed(req.user.id, res, next);
+});
+
+// @desc    Get User's HomeFeed
+// @route   GET /api/v1/post/home-timeline
+// @access  Private
+exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
+  GetUserHomeFeed(req.user.id, res, next);
 });
 
 // // @desc    Like A Post
@@ -185,7 +204,8 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
     }
 
     // Update the post in Redis
-    SetPostsCache(post.id, post);
+    SetPostCache(post.id, post);
+    //upadat ethe post in DB
     await post.save();
     res.status(200).json({ success: true, post });
   });
@@ -207,7 +227,7 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   post.likes.count--;
 
   // Update the post in Redis
-  SetPostsCache(post.id, post);
+  SetPostCache(post.id, post);
   // update on database
   post.save();
 
@@ -240,7 +260,7 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
 
   post.comment.push(comment.id);
   // Update the post in Redis
-  SetPostsCache(post.id, post);
+  SetPostCache(post.id, post);
   post.save();
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User Not Found", 404));
@@ -331,8 +351,8 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
 
 /* -----TODO----- */
 /* 
-  Put the comments on redis and link like the post are linked to userTimeline
-  Gat all Saved Post by a user
+  --- Put the comments on redis and link like the post are linked to userTimeline
+  --- Gat all Saved Post by a user
  */
 /* -------------- */
 

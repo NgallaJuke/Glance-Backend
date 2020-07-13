@@ -2,13 +2,56 @@ const User = require("../models/User");
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
 const path = require("path");
-const { SetUserProfil, GetUserProfil } = require("../middleware/redis-func");
+const {
+  SetUserProfil,
+  GetUserProfil,
+  GetAllUserProfil,
+} = require("../middleware/redis-func");
 
 // @desc    Get All Users
 // @route   GET /api/v1/auth/users
-// @access  Public
+// @access  Private
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
-  res.status(200).json(res.advancedResults);
+  GetAllUserProfil(async (err, keys) => {
+    if (err) return next(err);
+    if (keys) {
+      let i = 0;
+      let users = [];
+      console.log("KEYS", keys);
+      if (keys.includes("UserProfil:undefined")) {
+        keys = keys.filter((key) => key !== "UserProfil:undefined");
+      }
+      for (const key in keys) {
+        if (keys.hasOwnProperty(key)) {
+          const element = keys[key];
+          const userName = element.substring(11);
+          console.log("username", userName);
+          GetUserProfil(userName, async (err, user) => {
+            if (err) return next(err);
+
+            if (user) {
+              if (userName !== req.user.name && userName !== "undefined") {
+                console.log("\nUSERNAME", userName);
+                console.log("USER-RED", req.user.name);
+                i++;
+                users.push(JSON.parse(user));
+                if (i === keys.length - 1) {
+                  console.log("users", users.length);
+                  res.status(200).json({ success: true, users });
+                }
+              }
+            }
+          });
+        }
+      }
+    } else {
+      const userdb = await User.find();
+      if (!userdb) {
+        return next(new ErrorResponse("User not found in DB.", 404));
+      }
+      res.status(200).json({ success: true, users: userdb });
+    }
+  });
 });
 
 // @desc    Get A User

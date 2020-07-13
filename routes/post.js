@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const Post = require("../models/Post");
 const {
-  GetUserTimeline,
+  GetUserFeed,
+  GetUserHomeFeed,
   getAllPosts,
   CreatePost,
   DeletePost,
@@ -18,7 +19,8 @@ const { Protect, Authorize } = require("../middleware/auth");
 // const advancedResults = require("../middleware/advancedResults");
 
 router.route("/").get(getAllPosts);
-router.route("/timeline").get(Protect, GetUserTimeline);
+router.route("/timeline").get(Protect, GetUserFeed);
+router.route("/home-timeline").get(Protect, GetUserHomeFeed);
 router.route("/create").post(Protect, Authorize("tailor"), CreatePost);
 router.route("/delete").delete(Protect, Authorize("tailor"), DeletePost);
 router.route("/:id").get(GetSinglePost);
