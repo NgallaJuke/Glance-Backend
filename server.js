@@ -2,6 +2,8 @@ const path = require("path");
 const http = require("http");
 const express = require("express");
 const dotenv = require("dotenv");
+const app = express();
+const server = http.createServer(app);
 const morgan = require("morgan");
 const errorHandler = require("./middleware/error");
 const color = require("colors");
@@ -11,15 +13,13 @@ const cookie_parser = require("cookie-parser");
 const socketio = require("socket.io");
 const cors = require("cors");
 const methodOverride = require("method-override");
-const app = express();
-const server = http.createServer(app);
 const io = socketio(server);
 
 //allow cors
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:8080"],
+    origin: ["http://localhost:8080"], //change it for prod and dev environement
   })
 );
 
@@ -71,9 +71,10 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
   console.log(
-    ` Server runing in `.blue +
-      `${process.env.NODE_ENV}`.blue.underline.bold +
+    `SUCCESS:`.yellow +
+      `Server runing in `.blue +
+      `${process.env.NODE_ENV}`.blue.bold +
       ` mode on port `.blue +
-      `${PORT}`.blue.underline.bold
+      `${PORT}`.blue.bold
   )
 );

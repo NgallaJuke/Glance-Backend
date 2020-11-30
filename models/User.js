@@ -103,7 +103,6 @@ UserSchema.pre("save", async function (next) {
   //hash the password
   this.password = await bcrypt.hash(this.password, salt);
   this.user_secret = crypto.randomBytes(20).toString("hex");
-
   this.jti = crypto.randomBytes(20).toString("hex");
 });
 
@@ -126,7 +125,7 @@ UserSchema.methods.getSignedJWTtoken = function () {
 
 // Check if the user entered password Matches to the hashed password in the database
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password); //this referes to the user instance using this methode
 };
 
 // Generate and hash password Token
@@ -146,6 +145,8 @@ UserSchema.methods.getResetPasswordToken = function () {
 };
 
 // Generate and hash register Token
+// This Token is for the the url sent to a new registered user
+// Will help for aking sur that this url confirmation is for this particular user
 UserSchema.methods.getRegisterToken = function () {
   // generate Token
   const fakeToken = crypto.randomBytes(20).toString("hex");

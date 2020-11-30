@@ -37,10 +37,13 @@ exports.Register = asyncHandler(async (req, res) => {
   // create the mail : message and the url to redirect the user
   const fakeToken = user.getRegisterToken();
   await user.save({ validateBeforeSave: false });
+
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/api/v1/auth/confirm-register/${fakeToken}`;
+
   console.log("resetURL", resetURL);
+
   const message = `
   <h2>PLease confirm you registration by making a PUT request to this URL.</h2>\n
   <form
@@ -50,6 +53,7 @@ exports.Register = asyncHandler(async (req, res) => {
       <input type="submit" />
     </form>
   `;
+
   try {
     await sendEmail({
       email: email,
@@ -82,7 +86,7 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   user.RegisterToken = undefined;
   user.confirmRegisterExpire = undefined;
 
-  //pt the user in the whitelist
+  //put the user in the whitelist
   let stream = fs.createWriteStream(
     path.join(__dirname, "../config/whitelist.txt"),
     { flags: "a" }
@@ -122,6 +126,15 @@ exports.Login = asyncHandler(async (req, res, next) => {
 
   //find the user with that email
   const user = await User.findOne({ email }).select("+password");
+
+  // check if the user as confirm is registration
+  if (user.RegisterToken)
+    return next(
+      new ErrorResponse(
+        "Please Confirm your registration in the email we sent you",
+        401
+      )
+    );
   if (!user) return next(new ErrorResponse("Invalid credentials", 401));
 
   //Compare the user's password to the user's password saved in the database using the methods created at the User Model
