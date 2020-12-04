@@ -23,7 +23,7 @@ exports.GetUserFeed = (userID, res, next) => {
           if (userTimeline.length === i)
             res.status(200).json({
               success: true,
-              userTimeline,
+              timeline: userTimeline,
             });
         });
       }
@@ -53,7 +53,7 @@ exports.GetUserHomeFeed = (userID, res, next) => {
           if (userHomeFeed.length === i)
             res.status(200).json({
               success: true,
-              userHomeFeed,
+              timeline: userHomeFeed,
             });
         });
       }
