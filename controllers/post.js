@@ -50,7 +50,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 
     if (error) return console.log("Error :", error);
 
-    //move all the files to public folder
+    //move all the files to public folder Later cahnge this part to save the file in AWS
     files.forEach((file) => {
       moveFileToPosts_pic(file);
     });
@@ -67,12 +67,17 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Error while uploading the photos", 500));
 
   try {
+    const postOwner = await User.findById(req.user.id);
+    if (!postOwner) {
+      return next(new ErrorResponse("User not found in DB.", 404));
+    }
     // Save the post to the Database
     const post = await Post.create({
       picture,
       description: req.body.description,
       tags,
       user: req.user.id,
+      postOwner,
     });
 
     // Save the post to Redis
@@ -83,13 +88,15 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (err) return next(new ErrorResponse("Server error.", 500));
 
       if (!user) {
-        // if Redis doesn't give bac the user we get him from the database
+        // if Redis doesn't give back the user then get him from the database
         const userdb = await User.findById(req.user.id);
         if (!userdb) return next(new ErrorResponse("User is not found", 404));
         // update user own timeline
         SetUserFeed(userdb.id, post.id);
-        // upadate the user homefeed
+
+        // update the user homefeed
         SetUserHomeFeed(userdb.id, post.id);
+
         // Reset the User Profil in Redis in case it was lost
         SetUserProfil(req.user.name, userdb);
         let UserProfil = JSON.parse(userdb);
@@ -195,7 +202,7 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   post.likes.count++;
 
   //check if somehow the user didn't hace a cahced Profil
-  GetUserProfil(req.user.name, null, async (err, user) => {
+  GetUserProfil(req.user.name, async (err, user) => {
     if (err) return next(new ErrorResponse("Error get Cached post.", 500));
     if (!user) {
       // if the user follows no one yet
@@ -205,7 +212,7 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
 
     // Update the post in Redis
     SetPostCache(post.id, post);
-    //upadat ethe post in DB
+    //update the post in DB
     await post.save();
     res.status(200).json({ success: true, post });
   });
@@ -258,13 +265,14 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
   if (!comment)
     return next(new ErrorResponse("Error while creating the comment", 500));
 
-  post.comment.push(comment.id);
+  post.comments.comment.push(comment.id);
+  post.comments.count++;
   // Update the post in Redis
   SetPostCache(post.id, post);
   post.save();
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User Not Found", 404));
-  user.comment.push(comment.id);
+  user.comments.comment.push(comment.id);
   user.save();
   res.status(200).json({ success: true, comment, post, user });
 });

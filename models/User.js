@@ -46,12 +46,15 @@ const UserSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
-  comment: [
-    {
-      type: mongoose.Schema.ObjectId,
-      ref: "Comment",
-    },
-  ],
+  comments: {
+    count: { type: Number, default: 0 },
+    comment: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Comment",
+      },
+    ],
+  },
   blocked: [
     {
       type: mongoose.Schema.ObjectId,

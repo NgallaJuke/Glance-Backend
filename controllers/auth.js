@@ -171,7 +171,7 @@ exports.Logout = asyncHandler(async (req, res, next) => {
   );
 
   if (whitelist.includes(user.jti)) {
-    let newWhitelist = whitelist.replace(user.jti, "");
+    let newWhitelist = whitelist.replace(user.jti, "Logged Out");
     fs.writeFileSync(
       path.join(__dirname, "../config/whitelist.txt"),
       newWhitelist,
@@ -181,7 +181,10 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 
   // delete the jit token secret in the user document
   user.jti = undefined;
+  // save the change to database and then to cache
   await user.save();
+  SetUserProfil(user.userName, user);
+
   res.status(200).json({ success: true, message: "User Logged Out." });
 });
 
