@@ -6,7 +6,7 @@ const {
   SetUserProfil,
   GetUserProfil,
   GetAllUserProfil,
-} = require("../middleware/redis-func");
+} = require("../utils/redis-func");
 
 // @desc    Get All Users
 // @route   GET /api/v1/auth/users

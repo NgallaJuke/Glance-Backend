@@ -10,7 +10,7 @@ const {
   SetUserProfil,
   GetUserProfil,
   DeleteUserProfil,
-} = require("../middleware/redis-func");
+} = require("../utils/redis-func");
 
 // @desc    Register User
 // @route   POST /api/v1/auth/register

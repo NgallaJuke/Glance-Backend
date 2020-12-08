@@ -1,8 +1,24 @@
 const client = require("../utils/redis");
 const ErrorResponse = require("../utils/errorResponse");
 
+exports.SetUserProfil = (userName, user) => {
+  const userKey = `UserProfil:${userName}`;
+  client.set(userKey, JSON.stringify(user));
+};
+
+exports.SetPostCache = (postID, post) => {
+  const postKey = `PostId:${postID}`;
+  client.hset("Posts", postKey, JSON.stringify(post), (err) => {
+    if (err) return err;
+  });
+};
+
 exports.SetUserFeed = (userID, postID) => {
   client.hset(`UserFeeds:${userID}`, `Post:${postID}`, postID);
+};
+
+exports.SetUserHomeFeed = (userID, postID) => {
+  client.hset(`UserHomeFeeds:${userID}`, `Post:${postID}`, postID);
 };
 
 exports.GetUserFeed = (userID, res, next) => {
@@ -17,8 +33,10 @@ exports.GetUserFeed = (userID, res, next) => {
       if (posts.hasOwnProperty(postId)) {
         const element = posts[postId];
         client.hget("Posts", `PostId:${element}`, (err, post) => {
-          if (err)
-            return next(new ErrorResponse("Error get Cached post.", 500));
+          if (err || post === null)
+            return next(
+              new ErrorResponse("Error while getting Cached post.", 500)
+            );
           userTimeline.push(JSON.parse(post));
           if (userTimeline.length === i)
             res.status(200).json({
@@ -29,10 +47,6 @@ exports.GetUserFeed = (userID, res, next) => {
       }
     }
   });
-};
-
-exports.SetUserHomeFeed = (userID, postID) => {
-  client.hset(`UserHomeFeeds:${userID}`, `Post:${postID}`, postID);
 };
 
 exports.GetUserHomeFeed = (userID, res, next) => {
@@ -61,13 +75,6 @@ exports.GetUserHomeFeed = (userID, res, next) => {
   });
 };
 
-exports.SetPostCache = (postID, post) => {
-  const postKey = `PostId:${postID}`;
-  client.hset("Posts", postKey, JSON.stringify(post), (err) => {
-    if (err) return err;
-  });
-};
-
 exports.GetPostCache = (postID, callback) => {
   client.hget("Posts", `PostId:${postID}`, callback);
 };
@@ -81,16 +88,11 @@ exports.GetUserProfil = (userName, callback) => {
   client.get(`UserProfil:${userName}`, callback);
 };
 
-exports.SetUserProfil = (userName, user) => {
-  const userKey = `UserProfil:${userName}`;
-  client.set(userKey, JSON.stringify(user));
-};
-
 exports.GetAllUserProfil = (callback) => {
   client.KEYS("*UserProfil*", callback);
 };
 
 exports.DeleteUserProfil = (userName) => {
   const userKey = `UserProfil:${userName}`;
-  client.del(userKey);
+  client.DEL(userKey);
 };

@@ -17,7 +17,7 @@ const {
   SetPostCache,
   GetPostCache,
   DeletePostsCache,
-} = require("../middleware/redis-func");
+} = require("../utils/redis-func");
 
 // @desc    Create A Post
 // @route   GET /api/v1/post/create
