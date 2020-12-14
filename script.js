@@ -32,18 +32,14 @@ client.on("ready", function () {
 
   if (process.argv[2] === "-f") {
     flushRedis("UserProfil");
-    process.exit();
   }
   if (process.argv[2] === "-d" && process.argv[3] === "-u") {
     deleteKey("UserProfil");
-    process.exit();
   }
   if (process.argv[2] === "-d" && process.argv[3] === "-uf") {
     deleteKey("UserFeeds");
-    process.exit();
   }
   if (process.argv[2] === "-d" && process.argv[3] === "-hf") {
     deleteKey("UserHomeFeeds");
-    process.exit();
   }
 });

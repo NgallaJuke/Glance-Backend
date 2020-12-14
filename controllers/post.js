@@ -174,14 +174,14 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/post/timeline
 // @access  Private
 exports.GetUserFeed = asyncHandler(async (req, res, next) => {
-  GetUserFeed(req.user.id, res, next);
+  GetUserFeed(req.user.id, req.user.name, res, next);
 });
 
 // @desc    Get User's HomeFeed
 // @route   GET /api/v1/post/home-timeline
 // @access  Private
 exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
-  GetUserHomeFeed(req.user.id, res, next);
+  GetUserHomeFeed(req.user.id, req.user.name, res, next);
 });
 
 // // @desc    Like A Post

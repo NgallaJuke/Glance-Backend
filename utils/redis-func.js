@@ -21,7 +21,7 @@ exports.SetUserHomeFeed = (userID, postID) => {
   client.hset(`UserHomeFeeds:${userID}`, `Post:${postID}`, postID);
 };
 
-exports.GetUserFeed = (userID, res, next) => {
+exports.GetUserFeed = (userID, userName, res, next) => {
   client.hgetall(`UserFeeds:${userID}`, async (err, posts) => {
     if (err) return next(new ErrorResponse("Error get UserFeed.", 500));
     if (posts === null || posts === undefined)
@@ -37,41 +37,60 @@ exports.GetUserFeed = (userID, res, next) => {
             return next(
               new ErrorResponse("Error while getting Cached post.", 500)
             );
-          userTimeline.push(JSON.parse(post));
-          if (userTimeline.length === i)
-            res.status(200).json({
-              success: true,
-              timeline: userTimeline,
-            });
+          client.get(`UserProfil:${userName}`, (err, user) => {
+            if (err)
+              //TOTO if the user is not in cache then get him from the database
+              return next(
+                new ErrorResponse("Error while getting Cached UserProfil.", 500)
+              );
+            let newPost = JSON.parse(post);
+            newPost.postOwner = JSON.parse(user);
+            userTimeline.push(newPost);
+            if (userTimeline.length === i)
+              res.status(200).json({
+                success: true,
+                timeline: userTimeline,
+              });
+          });
         });
       }
     }
   });
 };
 
-exports.GetUserHomeFeed = (userID, res, next) => {
+exports.GetUserHomeFeed = (userID, userName, res, next) => {
   client.hgetall(`UserHomeFeeds:${userID}`, async (err, posts) => {
     if (err) return next(new ErrorResponse("Error get UserFeed.", 500));
     if (posts === null || posts === undefined)
       return next(new ErrorResponse("HomeTime is empty.", 404));
     let userHomeFeed = [];
     let i = 0;
-    for (const postId in posts) {
-      i++;
-      if (posts.hasOwnProperty(postId)) {
-        const element = posts[postId];
-        client.hget("Posts", `PostId:${element}`, (err, post) => {
-          if (err)
-            return next(new ErrorResponse("Error get Cached post.", 500));
-          userHomeFeed.push(JSON.parse(post));
-          if (userHomeFeed.length === i)
-            res.status(200).json({
-              success: true,
-              timeline: userHomeFeed,
-            });
-        });
+
+    client.get(`UserProfil:${userName}`, (err, user) => {
+      if (err)
+        //TOTO if the user is not in cache then get him from the database
+        return next(
+          new ErrorResponse("Error while getting Cached UserProfil.", 500)
+        );
+      for (const postId in posts) {
+        i++;
+        if (posts.hasOwnProperty(postId)) {
+          const element = posts[postId];
+          client.hget("Posts", `PostId:${element}`, (err, post) => {
+            if (err)
+              return next(new ErrorResponse("Error get Cached post.", 500));
+            let newPost = JSON.parse(post);
+            newPost.postOwner = JSON.parse(user);
+            userHomeFeed.push(newPost);
+            if (userHomeFeed.length === i)
+              res.status(200).json({
+                success: true,
+                timeline: userHomeFeed,
+              });
+          });
+        }
       }
-    }
+    });
   });
 };
 
