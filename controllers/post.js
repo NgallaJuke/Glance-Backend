@@ -95,7 +95,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
         SetUserFeed(userdb.id, post.id);
 
         // update the user homefeed
-        SetUserHomeFeed(userdb.id, post.id);
+        SetUserHomeFeed(userdb.userName, post.id);
 
         // Reset the User Profil in Redis in case it was lost
         SetUserProfil(req.user.name, userdb);
@@ -108,11 +108,12 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
           });
         }
       } else {
-        // update user own timeline
-        SetUserFeed(JSON.parse(user)._id, post.id);
-        // upadate the user homefeed
-        SetUserHomeFeed(JSON.parse(user)._id, post.id);
         let UserProfil = JSON.parse(user);
+        // update user own timeline
+        SetUserFeed(UserProfil._id, post.id);
+        // upadate the user homefeed
+        SetUserHomeFeed(UserProfil.userName, post.id);
+
         const followers = UserProfil.follower;
         if (followers) {
           followers.forEach((follower) => {
@@ -174,14 +175,14 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/post/timeline
 // @access  Private
 exports.GetUserFeed = asyncHandler(async (req, res, next) => {
-  GetUserFeed(req.user.id, req.user.name, res, next);
+  GetUserFeed(req.user.id, res, next);
 });
 
 // @desc    Get User's HomeFeed
-// @route   GET /api/v1/post/home-timeline
+// @route   GET /api/v1/post/:userName/home-timeline
 // @access  Private
 exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
-  GetUserHomeFeed(req.user.id, req.user.name, res, next);
+  GetUserHomeFeed(req.params.userName, res, next);
 });
 
 // // @desc    Like A Post

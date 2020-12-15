@@ -20,7 +20,7 @@ const { Protect, Authorize } = require("../middleware/auth");
 
 router.route("/").get(getAllPosts);
 router.route("/timeline").get(Protect, GetUserFeed);
-router.route("/home-timeline").get(Protect, GetUserHomeFeed);
+router.route("/:userName/home-timeline").get(Protect, GetUserHomeFeed);
 router.route("/create").post(Protect, Authorize("tailor"), CreatePost);
 router.route("/delete").delete(Protect, Authorize("tailor"), DeletePost);
 router.route("/:id").get(GetSinglePost);
