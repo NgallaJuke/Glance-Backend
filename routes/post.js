@@ -10,6 +10,7 @@ const {
   UnlikePost,
   GetSinglePost,
   CommentPost,
+  GetAllCommentsInPost,
   LikeComment,
   UnlikeComment,
   SavePost,
@@ -27,6 +28,7 @@ router.route("/:id").get(GetSinglePost);
 router.route("/:id/like").put(Protect, LikePost);
 router.route("/:id/unlike").put(Protect, UnlikePost);
 router.route("/:id/comment").post(Protect, CommentPost);
+router.route("/:id/comments").get(Protect, GetAllCommentsInPost);
 router.route("/:id/comment/like").put(Protect, LikeComment);
 router.route("/:id/comment/unlike").put(Protect, UnlikeComment);
 router.route("/:id/save").put(Protect, SavePost);

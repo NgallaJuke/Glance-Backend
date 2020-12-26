@@ -278,6 +278,20 @@ exports.CommentPost = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, comment, post, user });
 });
 
+// // @desc    Get All The Comments In A Post
+// // @route   GET /api/v1/post/:id/comments
+// // @access  Private
+exports.GetAllCommentsInPost = asyncHandler(async (req, res, next) => {
+  // get the post that the connected user comment on
+  const post = await Post.findById(req.params.id).populate("comments.comment");
+  if (!post)
+    return next(
+      new ErrorResponse("Post not found withi comments not found", 404)
+    );
+
+  res.status(200).json({ success: true, comments: post.comments.comment });
+});
+
 // // @desc    Like A Comment
 // // @route   PUT /api/v1/post/comment/:id/like
 // // @access  Private
