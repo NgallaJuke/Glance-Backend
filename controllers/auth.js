@@ -8,10 +8,9 @@ const fs = require("fs");
 const path = require("path");
 const {
   SetUserProfil,
-  GetUserProfil,
+  aGetUserProfil,
   DeleteUserProfil,
-} = require("../utils/redis-func");
-
+} = require("../utils/RedisPromisify");
 // @desc    Register User
 // @route   POST /api/v1/auth/register
 // @access  Public
@@ -25,25 +24,18 @@ exports.Register = asyncHandler(async (req, res) => {
     role,
     password,
   });
-
   if (!user)
     return next(
       new ErrorResponse("Internal Error while creating the user", 500)
     );
-
   // Set the UserProfile in the cache
   SetUserProfil(userName, user);
-
   // create the mail : message and the url to redirect the user
   const fakeToken = user.getRegisterToken();
   await user.save({ validateBeforeSave: false });
-
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/api/v1/auth/confirm-register/${fakeToken}`;
-
-  console.log("resetURL", resetURL);
-
   const message = `
   <h2>PLease confirm you registration by making a PUT request to this URL.</h2>\n
   <form
@@ -53,7 +45,6 @@ exports.Register = asyncHandler(async (req, res) => {
       <input type="submit" />
     </form>
   `;
-
   try {
     await sendEmail({
       email: email,
@@ -76,27 +67,22 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
     .createHash("sha256")
     .update(req.params.fakeToken)
     .digest("hex");
-
   const user = await User.findOne({
     RegisterToken,
     confirmRegisterExpire: { $gt: Date.now() },
   });
   if (!user) return next(new ErrorResponse("Invalid", 400));
-
   user.RegisterToken = undefined;
   user.confirmRegisterExpire = undefined;
-
   //put the user in the whitelist
   let stream = fs.createWriteStream(
     path.join(__dirname, "../config/whitelist.txt"),
     { flags: "a" }
   );
-
   stream.write(user.jti + "\n");
   stream.end();
   // save the user
   await user.save();
-
   // reset the UserProfile in Redis
   SetUserProfil(user.userName, user);
 
@@ -106,10 +92,10 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
 // @desc    Delete User Account
 // @route   DELETE /api/v1/auth/users/delete
 // @access  Private
-exports.deleteUser = asyncHandler(async (req, res, next) => {
+exports.deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndDelete(req.user.id);
   DeleteUserProfil(req.user.name);
-  res.status(200).json({ success: true, data: {} });
+  res.status(200).json({ success: true, message: "User Deleted Succesfully" });
 });
 
 // @desc    Login User
@@ -123,10 +109,8 @@ exports.Login = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("Please provide and email and a password", 400)
     );
-
   //find the user with that email
   const user = await User.findOne({ email }).select("+password");
-
   // check if the user as confirm is registration
   if (user.RegisterToken)
     return next(
@@ -136,24 +120,19 @@ exports.Login = asyncHandler(async (req, res, next) => {
       )
     );
   if (!user) return next(new ErrorResponse("Invalid credentials", 401));
-
   //Compare the user's password to the user's password saved in the database using the methods created at the User Model
   const pwdMatches = await user.matchPassword(password);
   if (!pwdMatches) return next(new ErrorResponse("Invalid credentials", 401));
-
   user.jti = crypto.randomBytes(20).toString("hex");
-
   await user.save();
   SetUserProfil(user.userName, user);
   let stream = fs.createWriteStream(
     path.join(__dirname, "../config/whitelist.txt"),
     { flags: "a" }
   );
-  console.log("Login User", user.jti);
 
   stream.write(user.jti + "\n");
   stream.end();
-
   SendTokentoCookieResponse(user, 200, res);
 });
 
@@ -164,12 +143,10 @@ exports.Logout = asyncHandler(async (req, res, next) => {
   //find the user with that email
   const user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 401));
-
   let whitelist = fs.readFileSync(
     path.join(__dirname, "../config/whitelist.txt"),
     "utf8"
   );
-
   if (whitelist.includes(user.jti)) {
     let newWhitelist = whitelist.replace(user.jti, "Logged Out");
     fs.writeFileSync(
@@ -178,13 +155,11 @@ exports.Logout = asyncHandler(async (req, res, next) => {
       "utf-8"
     );
   }
-
   // delete the jit token secret in the user document
   user.jti = undefined;
   // save the change to database and then to cache
   await user.save();
   SetUserProfil(user.userName, user);
-
   res.status(200).json({ success: true, message: "User Logged Out." });
 });
 
@@ -192,23 +167,16 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  GetUserProfil(req.user.name, async (err, user) => {
-    console.log("USERiD", req.user.id);
-
-    if (err) return next(new ErrorResponse("Error get Cached post.", 500));
-
-    // if the user profil is not in cache then get it from the database
-    // and set the user in cache
-    if (!user) {
-      const user = await User.findById(req.user.id);
-      if (!user) return next(new ErrorResponse("The User is not found", 404));
-      SetUserProfil(user.userName, user);
-      res.status(200).json({ success: true, UserProfil: user });
-      return;
-    }
-    let UserProfil = JSON.parse(user);
+  const userRedis = await aGetUserProfil(req.user.name, next);
+  if (userRedis) {
+    let UserProfil = JSON.parse(userRedis);
     res.status(200).json({ success: true, UserProfil });
-  });
+  } else {
+    const user = await User.findById(req.user.id);
+    if (!user) return next(new ErrorResponse("The User is not found", 404));
+    SetUserProfil(user.userName, user);
+    res.status(200).json({ success: true, UserProfil: user });
+  }
 });
 
 // @desc    Forgot Password
@@ -218,12 +186,9 @@ exports.ForgetPassword = asyncHandler(async (req, res, next) => {
   const user = await User.findOne({ email: req.body.email });
   if (!user)
     return next(new ErrorResponse("No user with that email found", 404));
-
   // get the reset token
   const resetToken = user.getResetPasswordToken();
-
   await user.save({ validateBeforeSave: false });
-
   // create reset URL
   const resetURL = `${req.protocol}://${req.get(
     "host"
@@ -255,22 +220,17 @@ exports.ResetPassword = asyncHandler(async (req, res, next) => {
     .createHash("sha256")
     .update(req.params.resetToken)
     .digest("hex");
-
   const user = await User.findOne({
     resetPasswordToken,
     resetPasswordExpire: { $gt: Date.now() },
   });
   if (!user) return next(new ErrorResponse("Invalid", 400));
-
   // Set new password
   user.password = req.body.password;
-
   user.resetPasswordToken = undefined;
   user.resetPasswordExpire = undefined;
-
   // save the user
   await user.save();
-
   // reset the UserProfile in Redis
   SetUserProfil(user.userName, user);
 
@@ -283,7 +243,6 @@ exports.ResetPassword = asyncHandler(async (req, res, next) => {
 const SendTokentoCookieResponse = async (user, status, res) => {
   //get the token from the methods we created at the User Model: getSignedJWTtoken()
   const token = await user.getSignedJWTtoken();
-
   //options for the cookie
   // process.env.JWT_COOK_EXP is in Day so trun in into ms
   const options = {
@@ -292,9 +251,7 @@ const SendTokentoCookieResponse = async (user, status, res) => {
     ),
     httpOnly: true,
   };
-
   if (process.env.NODE_ENV === "production") options.secure = true;
-
   res
     .status(status)
     .cookie("token", token, options)

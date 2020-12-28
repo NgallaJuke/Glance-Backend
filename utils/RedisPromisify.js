@@ -59,7 +59,7 @@ exports.aGetAllUserProfil = async (req, next) => {
   }
 };
 
-exports.GetPostCache = async (postID, next) => {
+exports.aGetPostCache = async (postID, next) => {
   const Post = await ahget("Posts", `PostId:${postID}`);
   if (Post) {
     return Post;
@@ -68,64 +68,56 @@ exports.GetPostCache = async (postID, next) => {
   }
 };
 
-exports.DeletePostsCache = (postID) => {
-  client.hdel("Posts", `PostId:${postID}`);
-};
-
-exports.GetUserFeed = async (userID, res, next) => {
+exports.aGetUserFeed = async (userID, next) => {
   const postIDs = await ahgetall(`UserFeeds:${userID}`);
-  if (!postIDs) {
-    return next(new ErrorResponse("Error get user's feed", 500));
-  } else {
-    let userTimeline = [];
-    let i = 0;
-    for (const postId in postIDs) {
-      i++;
+  if (!postIDs) return next(new ErrorResponse("Error get user's feed", 500));
+  let userTimeline = [];
+  for (const postId in postIDs) {
+    if (postIDs.hasOwnProperty(postId)) {
       const element = postIDs[postId];
       const cachedPost = await ahget("Posts", `PostId:${element}`);
-      if (!cachedPost) {
-        return next(new ErrorResponse("Error getting cached post.", 500));
-      } else {
-        let newPost = JSON.parse(cachedPost);
-        const user = await GetUserProfil(newPost.postOwner.userName);
-        // here we upadate the postOwner Propreties in case he changed his avatar for example
-        newPost.postOwner = JSON.parse(user);
-        userTimeline.push(newPost);
-        if (userTimeline.length === i)
-          res.status(200).json({
-            success: true,
-            timeline: userTimeline,
-          });
-      }
+      if (!cachedPost)
+        return next(new ErrorResponse("Error getting cached post", 500));
+      let newPost = JSON.parse(cachedPost);
+      const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
+      if (!user)
+        return next(new ErrorResponse("Error get cached user's profile", 500));
+      // here we upadate the postOwner Propreties in case he changed his avatar for example
+      newPost.postOwner = JSON.parse(user);
+      userTimeline.push(newPost);
+      if (userTimeline.length === Object.keys(postIDs).length)
+        return userTimeline;
     }
   }
 };
 
-exports.GetUserHomeFeed = async (userName, res, next) => {
-  const postIDs = await ahgetall(`UserFeeds:${userID}`);
-  if (!postIDs) {
-    return next(new ErrorResponse("Error get user's feed", 500));
-  } else {
-    const user = await GetUserProfil(userName);
-    let userHomeFeed = [];
-    let i = 0;
-    for (const postId in postIDs) {
-      i++;
+exports.aGetUserHomeFeed = async (userName, next) => {
+  const user = await aget(`UserProfil:${userName}`);
+  const postIDs = await ahgetall(`UserHomeFeeds:${userName}`);
+  let userHomeFeed = [];
+  for (const postId in postIDs) {
+    if (postIDs.hasOwnProperty(postId)) {
       const element = postIDs[postId];
       const cachedPost = await ahget("Posts", `PostId:${element}`);
       if (!cachedPost) {
-        return next(new ErrorResponse("Error getting cached post.", 500));
+        return next(new ErrorResponse("Error getting cached post", 500));
       } else {
         let newPost = JSON.parse(cachedPost);
         // here we upadate the postOwner Propreties in case he changed his avatar for example
         newPost.postOwner = JSON.parse(user);
         userHomeFeed.push(newPost);
-        if (userHomeFeed.length === i)
-          res.status(200).json({
-            success: true,
-            timeline: userHomeFeed,
-          });
+        if (userHomeFeed.length === Object.keys(postIDs).length)
+          return userHomeFeed;
       }
     }
   }
+};
+
+exports.DeletePostsCache = (postID) => {
+  client.hdel("Posts", `PostId:${postID}`);
+};
+
+exports.DeleteUserProfil = (userName) => {
+  const userKey = `UserProfil:${userName}`;
+  client.DEL(userKey);
 };
