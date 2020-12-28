@@ -60,7 +60,7 @@ exports.Register = asyncHandler(async (req, res) => {
       subject: "Confirm Registration",
       message,
     });
-    res.status(200).json({ success: true, data: "Email sent", user });
+    res.status(200).json({ success: true, data: "Email sent" });
   } catch (error) {
     console.log(error);
     next(new ErrorResponse("Email couldn't be sent ", 500));

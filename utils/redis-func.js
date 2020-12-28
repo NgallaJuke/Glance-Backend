@@ -29,6 +29,8 @@ exports.GetUserFeed = (userID, res, next) => {
     let userTimeline = [];
     let i = 0;
     for (const postId in posts) {
+      console.log("index :>> ", postId);
+      console.log("i :>> ", i);
       i++;
       if (posts.hasOwnProperty(postId)) {
         const element = posts[postId];
