@@ -13,7 +13,7 @@ const cookie_parser = require("cookie-parser");
 const socketio = require("socket.io");
 const cors = require("cors");
 const methodOverride = require("method-override");
-const io = socketio(server);
+// const io = socketio(server);
 
 //allow cors
 app.use(
@@ -65,9 +65,9 @@ app.use("/api/v1/comments/", commentRoute);
 app.use(errorHandler);
 
 // Run SocketIO when a user is connected
-io.on("connection", (socket) => {
-  console.log(" New User Connected".green);
-});
+// io.on("connection", (socket) => {
+//   console.log(" New User Connected".green);
+// });
 
 // setting up port
 const PORT = process.env.PORT || 5000;

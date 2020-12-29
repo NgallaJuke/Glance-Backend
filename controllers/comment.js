@@ -1,6 +1,4 @@
 const mongoose = require("mongoose");
-const Post = require("../models/Post");
-const User = require("../models/User");
 const Comment = require("../models/Comment");
 const ObjectId = require("mongoose").Types.ObjectId;
 const asyncHandler = require("../middleware/async");
@@ -14,9 +12,8 @@ exports.MakeComment = asyncHandler(async (req, res, next) => {
   // check if the description has any #(tags) in it
   const reg = /#\S+/g;
   let tags = [];
-  if (comment.match(reg)) {
-    tags = comment.match(reg);
-  }
+  if (comment.match(reg)) tags = comment.match(reg);
+
   const commentdb = await Comment.create({
     message: comment,
     tags,

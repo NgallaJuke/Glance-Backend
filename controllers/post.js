@@ -5,7 +5,6 @@ const Comment = require("../models/Comment");
 const ObjectId = require("mongoose").Types.ObjectId;
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
-const client = require("../utils/redis");
 const path = require("path");
 const {
   SetUserFeed,
@@ -16,6 +15,7 @@ const {
   aGetUserHomeFeed,
   aGetPostCache,
   DeletePostsCache,
+  aGetUserProfil,
 } = require("../utils/RedisPromisify");
 
 // @desc    Create A Post
@@ -75,44 +75,42 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     // Save the post to Redis
     SetPostCache(post.id, post);
     // send the post to the user's followers timeline
-    client.get(`UserProfil:${req.user.name}`, async (err, user) => {
-      if (err) return next(new ErrorResponse("Server error.", 500));
-      if (!user) {
-        // if Redis doesn't give back the user then get him from the database
-        const userdb = await User.findById(req.user.id);
-        if (!userdb) return next(new ErrorResponse("User is not found", 404));
-        // update user own timeline
-        SetUserFeed(userdb.id, post.id);
+    const userRedis = aGetUserProfil(req.user.name, next);
+    if (!userRedis) {
+      // if Redis doesn't give back the user then get him from the database
+      const userdb = await User.findById(req.user.id);
+      if (!userdb) return next(new ErrorResponse("User is not found", 404));
+      // update user own timeline
+      SetUserFeed(userdb.id, post.id);
 
-        // update the user homefeed
-        SetUserHomeFeed(userdb.userName, post.id);
+      // update the user homefeed
+      SetUserHomeFeed(userdb.userName, post.id);
 
-        // Reset the User Profil in Redis in case it was lost
-        SetUserProfil(req.user.name, userdb);
-        let UserProfil = JSON.parse(userdb);
-        const followers = UserProfil.follower;
-        if (followers) {
-          followers.forEach((follower) => {
-            // Update the followers's Timeline
-            SetUserFeed(follower, post.id);
-          });
-        }
-      } else {
-        let UserProfil = JSON.parse(user);
-        // update user own timeline
-        SetUserFeed(UserProfil._id, post.id);
-        // upadate the user homefeed
-        SetUserHomeFeed(UserProfil.userName, post.id);
-
-        const followers = UserProfil.follower;
-        if (followers) {
-          followers.forEach((follower) => {
-            // Update the followers's Timeline
-            SetUserFeed(follower, post.id);
-          });
-        }
+      // Reset the User Profil in Redis in case it was lost
+      SetUserProfil(req.user.name, userdb);
+      let UserProfil = JSON.parse(userdb);
+      const followers = UserProfil.follower;
+      if (followers) {
+        followers.forEach((follower) => {
+          // Update the followers's Timeline
+          SetUserFeed(follower, post.id);
+        });
       }
-    });
+    } else {
+      let UserProfil = JSON.parse(user);
+      // update user own timeline
+      SetUserFeed(UserProfil._id, post.id);
+      // upadate the user homefeed
+      SetUserHomeFeed(UserProfil.userName, post.id);
+      const followers = UserProfil.follower;
+      if (followers) {
+        followers.forEach((follower) => {
+          // Update the followers's Timeline
+          SetUserFeed(follower, post.id);
+        });
+      }
+    }
+
     res.status(200).json({ success: true, post: post });
   } catch (error) {
     console.log("Error", error);
