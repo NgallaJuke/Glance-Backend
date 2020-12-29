@@ -151,7 +151,7 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
     SetPostCache(req.params.id, post);
     res.status(200).json({ success: true, post });
   }
-  res.status(200).json({ success: true, post });
+  res.status(200).json({ success: true, post: JSON.parse(post) });
 });
 
 // @desc    Get User's Feed

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const CommentSchema = new mongoose.Schema({
-  message: { type: String, require: [true, "Comment must have text contend"] },
+  comment: { type: String, require: [true, "Comment must have text contend"] },
 
   tags: [String],
   likes: {
