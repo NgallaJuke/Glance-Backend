@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Comment = require("../models/Comment");
 const Post = require("../models/Post");
+const User = require("../models/User");
 const ObjectId = require("mongoose").Types.ObjectId;
 const asyncHandler = require("../middleware/async");
 const ErrorResponse = require("../utils/errorResponse");
@@ -54,5 +55,32 @@ exports.GetAllPostComments = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("Internal Error while getting comments", 500)
     );
-  res.status(200).json({ success: true, comments: post.comments.comment });
+
+  const comment = await Comment.find()
+    .where("_id")
+    .in(post.comments.comment)
+    .populate("user", "avatar userName");
+  res.status(200).json({ success: true, comments: comment });
+});
+
+// @desc    Delete A Comment
+// @route   DEL /api/v1/comments/:postID/comment?del=id
+// @access  Private
+exports.DeleteComment = asyncHandler(async (req, res, next) => {
+  //update the post in Database and in Redis
+  const postdb = await Post.findOneAndUpdate(
+    { _id: req.params.postID },
+    {
+      $pull: { "comments.comment": commentdb.id },
+      $inc: { "comments.count": -1 },
+    },
+    { new: true, runValidators: true }
+  );
+  if (!postdb)
+    return next(
+      new ErrorResponse("Internal Error while updating the post", 500)
+    );
+  SetPostCache(postdb.id, postdb);
+
+  res.status(200).json({ success: true, comment: commentdb });
 });

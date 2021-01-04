@@ -75,17 +75,15 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     // Save the post to Redis
     SetPostCache(post.id, post);
     // send the post to the user's followers timeline
-    const userRedis = aGetUserProfil(req.user.name, next);
+    const userRedis = await aGetUserProfil(req.user.name, next);
     if (!userRedis) {
       // if Redis doesn't give back the user then get him from the database
       const userdb = await User.findById(req.user.id);
       if (!userdb) return next(new ErrorResponse("User is not found", 404));
       // update user own timeline
       SetUserFeed(userdb.id, post.id);
-
       // update the user homefeed
       SetUserHomeFeed(userdb.userName, post.id);
-
       // Reset the User Profil in Redis in case it was lost
       SetUserProfil(req.user.name, userdb);
       let UserProfil = JSON.parse(userdb);
@@ -97,7 +95,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
         });
       }
     } else {
-      let UserProfil = JSON.parse(user);
+      let UserProfil = JSON.parse(userRedis);
       // update user own timeline
       SetUserFeed(UserProfil._id, post.id);
       // upadate the user homefeed

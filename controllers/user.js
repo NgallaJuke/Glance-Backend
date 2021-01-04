@@ -250,8 +250,10 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
           new ErrorResponse("Probleme while uploading the file", 500)
         );
       }
-      // insert the filemane in the database
-      user = await User.findByIdAndUpdate(
+
+      //write back teh user profile
+      // insert the filemane path in the database
+      const user = await User.findByIdAndUpdate(
         req.user.id,
         {
           avatar: path.join(__dirname + `../../public/avatars/${file.name}`),
@@ -261,14 +263,11 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
           runValidators: true,
         }
       );
+      // reset the user Redis profile
       SetUserProfil(req.user.name, user);
       res.status(200).json({ success: true, user });
     });
   } else {
-    const userdb = await User.findById(req.user.id);
-    if (!userdb) {
-      return next(new ErrorResponse("User not found in DB.", 404));
-    }
     if (!req.files) {
       return next(new ErrorResponse("Please add a photo", 400));
     }
@@ -300,7 +299,7 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
         );
       }
       // insert the filemane in the database
-      user = await User.findByIdAndUpdate(
+      const userdb = await User.findByIdAndUpdate(
         req.user.id,
         {
           avatar: path.join(__dirname + `../../public/avatars/${file.name}`),
@@ -310,8 +309,11 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
           runValidators: true,
         }
       );
-      SetUserProfil(req.user.name, user);
-      res.status(200).json({ success: true, user });
+      if (!userdb) {
+        return next(new ErrorResponse("User not found in DB.", 404));
+      }
+      SetUserProfil(req.user.name, userdb);
+      res.status(200).json({ success: true, user: userdb });
     });
   }
 });
