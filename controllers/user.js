@@ -9,7 +9,7 @@ const {
 } = require("../utils/RedisPromisify");
 
 // @desc    Get All Users
-// @route   GET /api/v1/auth/users
+// @route   GET /api/v1/users
 // @access  Private
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
   const usersRedis = await aGetAllUserProfil(req, next);
@@ -25,7 +25,7 @@ exports.getAllUsers = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get A User
-// @route   GET /api/v1/auth/user/:userName
+// @route   GET /api/v1/users/:userName
 // @access  Public
 exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   const user = await aGetUserProfil(req.params.userName, next);
@@ -72,6 +72,7 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
   );
   // set the followed user a UserProfil cache
   SetUserProfil(followed.userName, followed);
+
   let user = await User.findByIdAndUpdate(
     req.user.id,
     { $push: { following: req.params.id } },
@@ -121,7 +122,7 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
     }
   );
   // set the follower user a UserProfil cache
-  SetUserProfil(user.name, user);
+  SetUserProfil(req.user.name, user);
   res.status(200).json({ success: true, unfollowed, user });
 });
 
