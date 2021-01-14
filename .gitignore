@@ -1,5 +1,7 @@
 node_modules/
-config/config.env
-config/whitelist.txt
+config/development.env
+public/posts_pic/*
+public/avatars/*
+!public/avatars/default.png
 test.js
 client

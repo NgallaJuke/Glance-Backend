@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "set NODE_ENV=production && node server",
-    "dev": "nodemon server.js"
+    "dev": "set NODE_ENV=development && nodemon server.js"
   },
   "author": "Ngalla Juke",
   "license": "ISC",
