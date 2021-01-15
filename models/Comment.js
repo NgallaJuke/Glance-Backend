@@ -23,4 +23,24 @@ const CommentSchema = new mongoose.Schema({
     require: true,
   },
 });
+
+CommentSchema.pre("remove", async function (next) {
+  await this.model("Post").updateOne(
+    { _id: this.post },
+    {
+      $pull: { "comments.comment": this._id },
+      $inc: { "comments.count": -1 },
+    },
+    { new: true, runValidators: true }
+  );
+  await this.model("User").updateOne(
+    { _id: this.user },
+    {
+      $pull: { "comments.comment": this._id },
+      $inc: { "comments.count": -1 },
+    },
+    { new: true, runValidators: true }
+  );
+  next();
+});
 module.exports = mongoose.model("Comment", CommentSchema);
