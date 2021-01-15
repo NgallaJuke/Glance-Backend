@@ -64,23 +64,20 @@ exports.GetAllPostComments = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Delete A Comment
-// @route   DEL /api/v1/comments/:postID/comment?del=id
+// @route   DEL /api/v1/comments/:postID/delete/:commentID
 // @access  Private
 exports.DeleteComment = asyncHandler(async (req, res, next) => {
-  //update the post in Database and in Redis
-  const postdb = await Post.findOneAndUpdate(
-    { _id: req.params.postID },
-    {
-      $pull: { "comments.comment": commentdb.id },
-      $inc: { "comments.count": -1 },
-    },
-    { new: true, runValidators: true }
-  );
-  if (!postdb)
+  //delete the post in Database and in Redis
+  let comment = await Comment.findById(req.params.commentID);
+  if (!comment)
     return next(
-      new ErrorResponse("Internal Error while updating the post", 500)
+      new ErrorResponse("Internal Error Comment Not found In DB", 500)
     );
+  await comment.remove();
+  const postdb = await Post.findById(req.params.postID);
+  if (!postdb)
+    return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
   SetPostCache(postdb.id, postdb);
 
-  res.status(200).json({ success: true, comment: commentdb });
+  res.status(200).json({ success: true, message: "Comment Deleted" });
 });
