@@ -219,40 +219,6 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, post });
 });
 
-// // @desc    Like A Comment
-// // @route   PUT /api/v1/post/comment/:id/like
-// // @access  Private
-exports.LikeComment = asyncHandler(async (req, res, next) => {
-  let comment = await Comment.findById(req.params.id);
-  if (!comment) return next(new ErrorResponse("Post not found", 404));
-  if (
-    !comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
-      .length > 0
-  ) {
-    comment.likes.liker.push(req.user.id);
-    comment.likes.count++;
-  }
-  comment.save();
-  res.status(200).json({ success: true, comment });
-});
-
-// // @desc    UnLike A Comment
-// // @route   PUT /api/v1/post/comment/:id/unlike
-// // @access  Private
-exports.UnlikeComment = asyncHandler(async (req, res, next) => {
-  let comment = await Comment.findById(req.params.id);
-  if (!comment) return next(new ErrorResponse("Comment not found", 404));
-  if (
-    comment.likes.liker.filter((liker) => liker.toString() === req.user.id)
-      .length > 0
-  ) {
-    comment.likes.liker.pull(req.user.id);
-    comment.likes.count--;
-  }
-  comment.save();
-  res.status(200).json({ success: true, comment });
-});
-
 // // @desc    Save A Post
 // // @route   PUT /api/v1/post/:id/save
 // // @access  Private
