@@ -82,21 +82,52 @@ exports.DeleteComment = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, message: "Comment Deleted" });
 });
 
-// @desc    like A Comment
+// @desc    Like A Comment
 // @route   DEL /api/v1/comments/:postID/like/:commentID
 // @access  Private
 exports.LikeComment = asyncHandler(async (req, res, next) => {
-  //delete the post in Database and in Redis
-  let comment = await Comment.findById(req.params.commentID);
+  let comment = await Comment.findOneAndUpdate(
+    { _id: req.params.commentID },
+    {
+      $push: { "likes.liker": req.user.id },
+      $inc: { "likes.count": 1 },
+    },
+    { new: true, runValidators: true }
+  );
   if (!comment)
     return next(
       new ErrorResponse("Internal Error Comment Not found In DB", 500)
     );
-  await comment.remove();
+
   const postdb = await Post.findById(req.params.postID);
   if (!postdb)
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
   SetPostCache(postdb.id, postdb);
 
   res.status(200).json({ success: true, message: "Comment Liked" });
+});
+
+// @desc    Dislike A Comment
+// @route   DEL /api/v1/comments/:postID/dislike/:commentID
+// @access  Private
+exports.DislikeComment = asyncHandler(async (req, res, next) => {
+  let comment = await Comment.findOneAndUpdate(
+    { _id: req.params.commentID },
+    {
+      $pull: { "likes.liker": req.user.id },
+      $inc: { "likes.count": -1 },
+    },
+    { new: true, runValidators: true }
+  );
+  if (!comment)
+    return next(
+      new ErrorResponse("Internal Error Comment Not found In DB", 500)
+    );
+
+  const postdb = await Post.findById(req.params.postID);
+  if (!postdb)
+    return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
+  SetPostCache(postdb.id, postdb);
+
+  res.status(200).json({ success: true, message: "Comment Disliked" });
 });

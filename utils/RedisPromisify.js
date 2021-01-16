@@ -95,7 +95,6 @@ exports.aGetUserHomeFeed = async (userName, limit, next) => {
   const user = await aget(`UserProfil:${userName}`);
   const postIDs = await ahgetall(`UserHomeFeeds:${userName}`);
   let userHomeFeed = [];
-  console.log("limit :>> ", limit);
   if (limit === "all") {
     for (const postId in postIDs) {
       if (postIDs.hasOwnProperty(postId)) {
