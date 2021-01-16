@@ -91,13 +91,35 @@ exports.aGetUserFeed = async (userID, next) => {
   }
 };
 
-exports.aGetUserHomeFeed = async (userName, next) => {
+exports.aGetUserHomeFeed = async (userName, limit, next) => {
   const user = await aget(`UserProfil:${userName}`);
   const postIDs = await ahgetall(`UserHomeFeeds:${userName}`);
   let userHomeFeed = [];
-  for (const postId in postIDs) {
-    if (postIDs.hasOwnProperty(postId)) {
-      const element = postIDs[postId];
+  console.log("limit :>> ", limit);
+  if (limit === "all") {
+    for (const postId in postIDs) {
+      if (postIDs.hasOwnProperty(postId)) {
+        const element = postIDs[postId];
+        const cachedPost = await ahget("Posts", `PostId:${element}`);
+        if (!cachedPost) {
+          return next(new ErrorResponse("Error getting cached post", 500));
+        } else {
+          let newPost = JSON.parse(cachedPost);
+          // here we upadate the postOwner Propreties in case he changed his avatar for example
+          newPost.postOwner = JSON.parse(user);
+          userHomeFeed.push(newPost);
+          if (userHomeFeed.length === Object.keys(postIDs).length)
+            return userHomeFeed;
+        }
+      }
+    }
+  } else {
+    let arr = [];
+    for (const postId in postIDs) {
+      arr.push(postId);
+    }
+    for (let n = arr.length; n--; ) {
+      const element = postIDs[arr[n]];
       const cachedPost = await ahget("Posts", `PostId:${element}`);
       if (!cachedPost) {
         return next(new ErrorResponse("Error getting cached post", 500));
@@ -106,8 +128,11 @@ exports.aGetUserHomeFeed = async (userName, next) => {
         // here we upadate the postOwner Propreties in case he changed his avatar for example
         newPost.postOwner = JSON.parse(user);
         userHomeFeed.push(newPost);
-        if (userHomeFeed.length === Object.keys(postIDs).length)
-          return userHomeFeed;
+        if (
+          userHomeFeed.length === Object.keys(postIDs).length ||
+          userHomeFeed.length === limit
+        )
+          return userHomeFeed.reverse();
       }
     }
   }

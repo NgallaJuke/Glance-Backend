@@ -81,3 +81,22 @@ exports.DeleteComment = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({ success: true, message: "Comment Deleted" });
 });
+
+// @desc    like A Comment
+// @route   DEL /api/v1/comments/:postID/like/:commentID
+// @access  Private
+exports.LikeComment = asyncHandler(async (req, res, next) => {
+  //delete the post in Database and in Redis
+  let comment = await Comment.findById(req.params.commentID);
+  if (!comment)
+    return next(
+      new ErrorResponse("Internal Error Comment Not found In DB", 500)
+    );
+  await comment.remove();
+  const postdb = await Post.findById(req.params.postID);
+  if (!postdb)
+    return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
+  SetPostCache(postdb.id, postdb);
+
+  res.status(200).json({ success: true, message: "Comment Liked" });
+});

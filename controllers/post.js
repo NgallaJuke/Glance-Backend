@@ -164,10 +164,15 @@ exports.GetUserFeed = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get User's HomeFeed
-// @route   GET /api/v1/post/:userName/home-timeline
+// @route   GET /api/v1/post/:userName/home-timeline?limit
 // @access  Private
 exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
-  const userHomeFeed = await aGetUserHomeFeed(req.params.userName, next);
+  let limit = +req.query.limit;
+  if (!limit) {
+    limit = "all";
+  }
+
+  const userHomeFeed = await aGetUserHomeFeed(req.params.userName, limit, next);
   res.status(200).json({
     success: true,
     timeline: userHomeFeed,
@@ -212,53 +217,6 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   // update on database
   post.save();
   res.status(200).json({ success: true, post });
-});
-
-// // @desc    Comment A Post
-// // @route   PUT /api/v1/post/:id/comment
-// // @access  Private
-exports.CommentPost = asyncHandler(async (req, res, next) => {
-  // get the post that the connected user comment on
-  const post = await Post.findById(req.params.id);
-  if (!post) return next(new ErrorResponse("Post not found", 404));
-
-  // check if the description has any #(tags) in it
-  const reg = /#\S+/g;
-  let tags = [];
-  if (req.body.message.match(reg)) {
-    tags = req.body.message.match(reg);
-  }
-  const comment = await Comment.create({
-    message: req.body.message,
-    tags,
-    user: req.user.id,
-    post: req.params.id,
-  });
-  if (!comment)
-    return next(new ErrorResponse("Error while creating the comment", 500));
-  post.comments.comment.push(comment.id);
-  post.comments.count++;
-  // Update the post in Redis
-  SetPostCache(post.id, post);
-  post.save();
-  const user = await User.findById(req.user.id);
-  if (!user) return next(new ErrorResponse("User Not Found", 404));
-  user.comments.comment.push(comment.id);
-  user.save();
-  res.status(200).json({ success: true, comment, post, user });
-});
-
-// // @desc    Get All The Comments In A Post
-// // @route   GET /api/v1/post/:id/comments
-// // @access  Private
-exports.GetAllCommentsInPost = asyncHandler(async (req, res, next) => {
-  // get the post that the connected user comment on
-  const post = await Post.findById(req.params.id).populate("comments.comment");
-  if (!post)
-    return next(
-      new ErrorResponse("Post not found withi comments not found", 404)
-    );
-  res.status(200).json({ success: true, comments: post.comments.comment });
 });
 
 // // @desc    Like A Comment
