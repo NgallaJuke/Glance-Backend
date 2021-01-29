@@ -4,6 +4,13 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const path = require("path");
 
+/* 
+TODO: 
+ - Add Description/Biographie for the user to add later... 
+ - Add Tags ( what he is doing like which style he is working on... related to the Tags When Creating a Post)
+ - Add Location, Phone Number  
+ - Add Social Media 
+*/
 const UserSchema = new mongoose.Schema({
   email: {
     type: String,

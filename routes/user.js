@@ -2,6 +2,7 @@ const router = require("express").Router();
 const {
   getAllUsers,
   GetSingleUser,
+  GetSingleUserInDB,
   FollowUser,
   UnfollowUser,
   BlockUser,
@@ -15,6 +16,7 @@ const { Protect } = require("../middleware/auth");
 
 router.route("/").get(Protect, getAllUsers);
 router.route("/:userName").get(GetSingleUser);
+router.route("/user/:id").get(GetSingleUserInDB);
 router.route("/:id/follow").put(Protect, FollowUser);
 router.route("/:id/unfollow").put(Protect, UnfollowUser);
 router.route("/:id/block").put(Protect, BlockUser);
