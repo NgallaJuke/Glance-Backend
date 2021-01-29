@@ -32,12 +32,23 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   if (user) {
     res.status(200).json({ success: true, UserProfil: JSON.parse(user) });
   } else {
-    const userdb = await User.findById(req.params.id);
+    const userdb = await User.findOne(req.params.userName);
     if (!userdb) {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
     res.status(200).json({ success: true, UserProfil: user });
   }
+});
+
+// @desc    Get A User in DB
+// @route   GET /api/v1/users/user/:id
+// @access  Public
+exports.GetSingleUserInDB = asyncHandler(async (req, res, next) => {
+  const userdb = await User.findById(req.params.id);
+  if (!userdb) {
+    return next(new ErrorResponse("User not found in DB.", 404));
+  }
+  res.status(200).json({ success: true, UserProfil: userdb });
 });
 
 // @desc    Follow a User

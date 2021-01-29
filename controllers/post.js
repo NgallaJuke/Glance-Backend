@@ -288,6 +288,7 @@ const fileCheck = (userName, file, count, picture, error) => {
   }`;
   picture.push(file.name);
 };
+
 const moveFileToPosts_pic = (file) => {
   file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
     if (err) {

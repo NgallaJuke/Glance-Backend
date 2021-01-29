@@ -52,7 +52,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookie_parser());
 
 //User Morgan for dev logger
-if (process.env.NODE_ENV === "development") app.use(morgan("dev"));
+if (
+  process.env.NODE_ENV.substring(0, process.env.NODE_ENV.length - 1) ===
+  "development"
+) {
+  app.use(morgan("dev"));
+}
 
 // file Uploader
 app.use(fileupload());
