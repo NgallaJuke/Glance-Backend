@@ -5,6 +5,8 @@ const {
   GetSingleUserInDB,
   FollowUser,
   UnfollowUser,
+  getAllFollower,
+  getAllFollowing,
   BlockUser,
   UnblockUser,
   UpdateUser,
@@ -19,6 +21,8 @@ router.route("/:userName").get(GetSingleUser);
 router.route("/user/:id").get(GetSingleUserInDB);
 router.route("/:id/follow").put(Protect, FollowUser);
 router.route("/:id/unfollow").put(Protect, UnfollowUser);
+router.route("/all-follower/:id").get(Protect, getAllFollower);
+router.route("/all-following/:id").get(Protect, getAllFollowing);
 router.route("/:id/block").put(Protect, BlockUser);
 router.route("/:id/unblock").put(Protect, UnblockUser);
 router.route("/update").put(Protect, UpdateUser);
