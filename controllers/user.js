@@ -51,6 +51,28 @@ exports.GetSingleUserInDB = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, UserProfil: userdb });
 });
 
+// @desc    Get All User's Followers
+// @route   GET /api/v1/users/all-follower/:id
+// @access  Public
+exports.getAllFollower = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.params.id).populate("follower");
+  if (!user) {
+    return next(new ErrorResponse("User not found in DB.", 404));
+  }
+  res.status(200).json({ success: true, Follower: user.follower });
+});
+
+// @desc    Get All User's Following
+// @route   GET /api/v1/users/all-following/:id
+// @access  Public
+exports.getAllFollowing = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.params.id).populate("following");
+  if (!user) {
+    return next(new ErrorResponse("User not found in DB.", 404));
+  }
+  res.status(200).json({ success: true, Following: user.following });
+});
+
 // @desc    Follow a User
 // @route   PUT /api/v1/users/:id/follow
 // @access  Private
