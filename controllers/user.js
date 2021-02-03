@@ -59,7 +59,7 @@ exports.getAllFollower = asyncHandler(async (req, res, next) => {
   if (!user) {
     return next(new ErrorResponse("User not found in DB.", 404));
   }
-  res.status(200).json({ success: true, Follower: user.follower });
+  res.status(200).json({ success: true, follower: user.follower });
 });
 
 // @desc    Get All User's Following
@@ -70,7 +70,7 @@ exports.getAllFollowing = asyncHandler(async (req, res, next) => {
   if (!user) {
     return next(new ErrorResponse("User not found in DB.", 404));
   }
-  res.status(200).json({ success: true, Following: user.following });
+  res.status(200).json({ success: true, following: user.following });
 });
 
 // @desc    Follow a User
