@@ -11,7 +11,7 @@ const {
 } = require("../controllers/auth");
 const { Protect } = require("../middleware/auth");
 router.route("/register").post(Register);
-router.route("/confirm-register/:fakeToken").put(ConfirmRegister);
+router.route("/confirm-register/:fakeToken").post(ConfirmRegister);
 router.route("/delete").delete(Protect, deleteUser);
 router.route("/login").post(Login);
 router.route("/logout").put(Protect, Logout);

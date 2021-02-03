@@ -4,6 +4,13 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const path = require("path");
 
+/* 
+TODO: 
+ - Add Description/Biographie for the user to add later... 
+ - Add Tags ( what he is doing like which style he is working on... related to the Tags When Creating a Post)
+ - Add Location, Phone Number  
+ - Add Social Media 
+*/
 const UserSchema = new mongoose.Schema({
   email: {
     type: String,
@@ -13,18 +20,6 @@ const UserSchema = new mongoose.Schema({
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       "Please add a valid email",
     ],
-  },
-  firstName: {
-    type: String,
-    maxlength: 30,
-    required: [true, "Please add your firstname"],
-    match: [/^[a-zA-Z]+([ ]?[a-zA-Z])*$/, "First ame Unvalid"],
-  },
-  lastName: {
-    type: String,
-    maxlength: 30,
-    required: [true, "Please add your lastName"],
-    match: [/^[a-zA-Z]*$/, "Last ame Unvalid"],
   },
   userName: {
     type: String,
@@ -58,12 +53,15 @@ const UserSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
-  comment: [
-    {
-      type: mongoose.Schema.ObjectId,
-      ref: "Comment",
-    },
-  ],
+  comments: {
+    count: { type: Number, default: 0 },
+    comment: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Comment",
+      },
+    ],
+  },
   blocked: [
     {
       type: mongoose.Schema.ObjectId,
@@ -115,7 +113,6 @@ UserSchema.pre("save", async function (next) {
   //hash the password
   this.password = await bcrypt.hash(this.password, salt);
   this.user_secret = crypto.randomBytes(20).toString("hex");
-
   this.jti = crypto.randomBytes(20).toString("hex");
 });
 
@@ -138,7 +135,7 @@ UserSchema.methods.getSignedJWTtoken = function () {
 
 // Check if the user entered password Matches to the hashed password in the database
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password); //this referes to the user instance using this methode
 };
 
 // Generate and hash password Token
@@ -158,6 +155,8 @@ UserSchema.methods.getResetPasswordToken = function () {
 };
 
 // Generate and hash register Token
+// This Token is for the the url sent to a new registered user
+// Will help for aking sur that this url confirmation is for this particular user
 UserSchema.methods.getRegisterToken = function () {
   // generate Token
   const fakeToken = crypto.randomBytes(20).toString("hex");
