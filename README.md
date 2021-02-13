@@ -1,7 +1,7 @@
 # Description
 
-This is back-end application of the Tailor app.
-The tailor App is a platform where tailors can share there works. It's highly inspired by [Dribbble](https://dribbble.com/) and [Twitter](https://twitter.com/).
+This is backend application of the Glance app.
+Glance is customizable social networking platform.It can be customised for artists, designers, stylists and more. It's highly inspired by [Dribbble](https://dribbble.com/), [Behance](https://benahce.net/) and [Twitter](https://twitter.com/).
 
 I made this app for beginners who want to learn [nodejs](https://nodejs.org/en), [express](https://expressjs.com/) and [redis](https://redis.io/).
 

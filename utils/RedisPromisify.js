@@ -70,7 +70,7 @@ exports.aGetPostCache = async (postID, next) => {
 
 exports.aGetUserFeed = async (userID, next) => {
   const postIDs = await ahgetall(`UserFeeds:${userID}`);
-  if (!postIDs) return next(new ErrorResponse("Error get user's feed", 500));
+  if (!postIDs) return next(new ErrorResponse("TimeLine Is Empty !", 500));
   let userTimeline = [];
   for (const postId in postIDs) {
     if (postIDs.hasOwnProperty(postId)) {
@@ -82,7 +82,7 @@ exports.aGetUserFeed = async (userID, next) => {
       //check if the post is own by a followed user. If not then remove it from the timeline
       const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
       if (!user)
-        return next(new ErrorResponse("Error get cached user's profile", 500));
+        return next(new ErrorResponse("Error get cached user's profil", 500));
       newPost.postOwner = JSON.parse(user);
 
       // TODO : if the user ont folowed anymore rmeove his post from the timeline
