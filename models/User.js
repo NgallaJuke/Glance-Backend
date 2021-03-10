@@ -98,7 +98,7 @@ const UserSchema = new mongoose.Schema({
 const user = new User.create({...})
 ....... user.createToken
 
--STATICS are called in the model itself -> here create is a STATIC
+-STATICS are called in the model itself -> here create is a STATIC -> create is a static 
 -METHODS are called in what you initialize on the model 
   or get from the model -> createToken is a methode
 */

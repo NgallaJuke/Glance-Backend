@@ -14,13 +14,18 @@ const {
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
   const usersRedis = await aGetAllUserProfil(req, next);
   if (usersRedis) {
+    console.log("REDIS");
     res.status(200).json({ success: true, users: usersRedis });
   } else {
-    const userdb = await User.find();
-    if (!userdb) {
+    const usersdb = await User.find();
+    if (!usersdb) {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
-    res.status(200).json({ success: true, users: userdb });
+    console.log("MONGO");
+    usersdb.forEach(user => {
+      SetUserProfil(user.userName, user);
+    });
+    res.status(200).json({ success: true, users: usersdb });
   }
 });
 
@@ -32,11 +37,12 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   if (user) {
     res.status(200).json({ success: true, UserProfil: JSON.parse(user) });
   } else {
-    const userdb = await User.findOne(req.params.userName);
+    const userdb = await User.findOne({ userName: req.params.userName });
     if (!userdb) {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
-    res.status(200).json({ success: true, UserProfil: user });
+    SetUserProfil(userdb.userName, userdb);
+    res.status(200).json({ success: true, UserProfil: userdb });
   }
 });
 
@@ -85,13 +91,13 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Followed user not found.", 404));
 
   if (
-    followed.follower.filter((follower) => follower.toString() === req.user.id)
+    followed.follower.filter(follower => follower.toString() === req.user.id)
       .length > 0
   )
     return next(new ErrorResponse("User already followed.", 403));
 
   if (
-    followed.blockedBy.filter((blocker) => blocker.toString() === req.user.id)
+    followed.blockedBy.filter(blocker => blocker.toString() === req.user.id)
       .length > 0
   )
     return next(
@@ -133,7 +139,7 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("User not found", 404));
   // check if the connected user is following this user
   if (
-    user.following.filter((following) => following.toString() === req.params.id)
+    user.following.filter(following => following.toString() === req.params.id)
       .length === 0
   )
     return next(new ErrorResponse("User is not followed", 403));
@@ -169,7 +175,7 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
   let blocked = await User.findById(req.params.id);
   if (!blocked) return next(new ErrorResponse("Blocked User not found", 404));
   if (
-    blocked.blockedBy.filter((blocker) => blocker.toString() === req.user.id)
+    blocked.blockedBy.filter(blocker => blocker.toString() === req.user.id)
       .length > 0
   )
     return next(new ErrorResponse("User already blocked", 403));
@@ -210,7 +216,7 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
   if (!blocked) return next(new ErrorResponse("Blocked User not found", 404));
   if (
     (blocked.blockedBy.filter(
-      (blocker) => blocker.toString() === req.user.id
+      blocker => blocker.toString() === req.user.id
     ).length = 0)
   )
     return next(new ErrorResponse("User in not blocked", 403));
@@ -278,7 +284,7 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
       path.parse(file.name).ext
     }`;
     // move the file in public/avatars
-    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
+    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async err => {
       if (err) {
         return next(
           new ErrorResponse("Probleme while uploading the file", 500)
@@ -326,7 +332,7 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
     }`;
 
     // move the file in public/avatars
-    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
+    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async err => {
       if (err) {
         return next(
           new ErrorResponse("Probleme while uploading the file", 500)
