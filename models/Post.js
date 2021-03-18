@@ -44,12 +44,20 @@ const PostSchema = new mongoose.Schema({
 //   next();
 // });
 
-PostSchema.statics.findByUsername = async function (username) {
+PostSchema.statics.findByUsername = async function (username, limit) {
   var query = this.find();
   const user = await User.findOne({ userName: username });
   if (user) {
-    const posts = await query.where({ user: user._id });
-    return posts;
+    if (limit === "all") {
+      const posts = await query.where({ user: user._id });
+      return posts;
+    } else {
+      const posts = await query
+        .where({ user: user._id })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+      return posts;
+    }
   }
 };
 module.exports = mongoose.model("Post", PostSchema);

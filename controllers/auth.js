@@ -14,7 +14,7 @@ const {
 // @desc    Register User
 // @route   POST /api/v1/auth/register
 // @access  Public
-exports.Register = asyncHandler(async (req, res) => {
+exports.Register = asyncHandler(async (req, res, next) => {
   // get this variable from the req.body = form registration
   const { email, userName, role, password } = req.body;
 
