@@ -190,9 +190,7 @@ exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
     if (limit === "all") {
       posts = await Post.findByUsername(req.params.userName);
     } else {
-      posts = await Post.findByUsername(req.params.userName)
-        .sort({ createdAt: -1 })
-        .limit(limit);
+      posts = await Post.findByUsername(req.params.userName);
     }
     if (!posts)
       return next(
