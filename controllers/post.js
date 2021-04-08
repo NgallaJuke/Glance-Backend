@@ -80,17 +80,18 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       // if Redis doesn't give back the user then get him from the database
       const userdb = await User.findById(req.user.id);
       if (!userdb) return next(new ErrorResponse("User is not found", 404));
+      // Reset the User Profil in Redis in case it was lost
+      SetUserProfil(req.user.name, userdb);
       // update user own timeline
       SetUserFeed(userdb.id, post.id);
       // update the user homefeed
       SetUserHomeFeed(userdb.userName, post.id);
-      // Reset the User Profil in Redis in case it was lost
-      SetUserProfil(req.user.name, userdb);
       let UserProfil = JSON.parse(userdb);
       const followers = UserProfil.follower;
       if (followers) {
         followers.forEach(follower => {
           // Update the followers's Timeline
+          console.log("MONGO --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -104,6 +105,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (followers) {
         followers.forEach(follower => {
           // Update the followers's Timeline
+          console.log("REDIS --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -158,6 +160,7 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 exports.GetUserFeed = asyncHandler(async (req, res, next) => {
   const userTimeline = await aGetUserFeed(req.user.id, next);
   if (!userTimeline) {
+    console.log("NO TImeline in Redis");
     const posts = await Post.find({ user: req.user.id });
     if (!posts)
       return next(
@@ -165,14 +168,18 @@ exports.GetUserFeed = asyncHandler(async (req, res, next) => {
       );
     // In case this post where not in the cache
     posts.forEach(post => {
-      SetPostCache(post._id, post);
+      SetPostCache(post.id, post);
+      SetUserFeed(req.user.id, post.id);
     });
     res.status(200).json({ success: true, timeline: posts });
+  } else {
+    console.log("YES TImeline in Redis");
+
+    res.status(200).json({
+      success: true,
+      timeline: userTimeline,
+    });
   }
-  res.status(200).json({
-    success: true,
-    timeline: userTimeline,
-  });
 });
 
 // @desc    Get User's HomeFeed

@@ -3,10 +3,11 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const path = require("path");
+const { kMaxLength } = require("buffer");
 
 /* 
 TODO: 
- - Add Description/Biographie for the user to add later... 
+ 
  - Add Tags ( what he is doing like which style he is working on... related to the Tags When Creating a Post)
  - Add Location, Phone Number  
  - Add Social Media 
@@ -27,6 +28,26 @@ const UserSchema = new mongoose.Schema({
     unique: [true, "this userName is already exist"],
     required: [true, "Please add your userName"],
   },
+  displayName: {
+    type: String,
+    maxlength: 30,
+  },
+  bio: {
+    type: String,
+    maxlength: 100,
+  },
+  interest: [String],
+  socials: [
+    {
+      twitter: { type: String },
+      facebook: { type: String },
+      instagram: { type: String },
+      github: { type: String },
+      linkedin: { type: String },
+      dribbble: { type: String },
+      behance: { type: String },
+    },
+  ],
   password: {
     type: String,
     required: [true, "Please add a password"],
