@@ -71,12 +71,16 @@ exports.aGetPostCache = async (postID, next) => {
 exports.aGetUserFeed = async (userID, next) => {
   const postIDs = await ahgetall(`UserFeeds:${userID}`);
 
-  if (postIDs) return;
+  if (!postIDs) return;
   let userTimeline = [];
   for (const postId in postIDs) {
     if (postIDs.hasOwnProperty(postId)) {
       const element = postIDs[postId];
-      const cachedPost = await ahget("Posts", `PostId:${element}`);
+      const cachedPost = await ahget(
+        "Posts",
+        `PostId:${element.replace(/['"]+/g, "")}`
+      );
+      console.log("cachedPost", cachedPost);
       if (!cachedPost)
         return next(new ErrorResponse("Error getting cached post", 500));
       let newPost = JSON.parse(cachedPost);
