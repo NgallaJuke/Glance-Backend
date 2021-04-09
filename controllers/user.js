@@ -12,21 +12,21 @@ const {
 // @route   GET /api/v1/users
 // @access  Private
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
-  const usersRedis = await aGetAllUserProfil(req, next);
-  if (usersRedis) {
-    console.log("REDIS");
-    res.status(200).json({ success: true, users: usersRedis });
-  } else {
-    const usersdb = await User.find();
-    if (!usersdb) {
-      return next(new ErrorResponse("User not found in DB.", 404));
-    }
-    console.log("MONGO");
-    usersdb.forEach(user => {
-      SetUserProfil(user.userName, user);
-    });
-    res.status(200).json({ success: true, users: usersdb });
+  // const usersRedis = await aGetAllUserProfil(req, next);
+  // if (usersRedis) {
+  //   console.log("REDIS");
+  //   res.status(200).json({ success: true, users: usersRedis });
+  // } else {
+  const usersdb = await User.find();
+  if (!usersdb) {
+    return next(new ErrorResponse("User not found in DB.", 404));
   }
+  console.log("MONGO");
+  usersdb.forEach(user => {
+    SetUserProfil(user.userName, user);
+  });
+  res.status(200).json({ success: true, users: usersdb });
+  // }
 });
 
 // @desc    Get A User
