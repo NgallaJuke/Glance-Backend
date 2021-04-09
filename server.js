@@ -10,9 +10,17 @@ const color = require("colors");
 const fileupload = require("express-fileupload");
 const bodyParser = require("body-parser");
 const cookie_parser = require("cookie-parser");
+const methodOverride = require("method-override");
 const socketio = require("socket.io");
 const cors = require("cors");
-const methodOverride = require("method-override");
+
+//secuities middleware
+const mongoSanitize = require("express-mongo-sanitize");
+const helmet = require("helmet");
+const xss = require("xss-clean");
+const hpp = require("hpp");
+const rateLimit = require("express-rate-limit");
+
 // const io = socketio(server);
 
 //allow cors
@@ -61,6 +69,17 @@ if (
 
 // file Uploader
 app.use(fileupload());
+
+// Security
+app.use(mongoSanitize());
+app.use(helmet()); // security header
+app.use(xss()); // security cross site scripting
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, //10 min
+  max: 50,
+});
+app.use(limiter); // Limit the number of request taht can be made
+app.use(hpp()); // security param polution
 
 // STATIC folder for the file
 app.use(express.static(path.join(__dirname, "public")));

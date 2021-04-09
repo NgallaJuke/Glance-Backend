@@ -80,7 +80,6 @@ exports.aGetUserFeed = async (userID, next) => {
         "Posts",
         `PostId:${element.replace(/['"]+/g, "")}`
       );
-      console.log("cachedPost", cachedPost);
       if (!cachedPost)
         return next(new ErrorResponse("Error getting cached post", 500));
       let newPost = JSON.parse(cachedPost);
