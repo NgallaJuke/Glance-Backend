@@ -34,7 +34,11 @@ const UserSchema = new mongoose.Schema({
   },
   bio: {
     type: String,
-    maxlength: 100,
+    maxlength: 150,
+  },
+  about_user: {
+    type: String,
+    maxlength: 500,
   },
   interest: [String],
   socials: [
