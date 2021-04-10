@@ -247,7 +247,7 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Access not authorize", 401));
   }
   user.updatedAt = Date.now;
-  user = await User.findByIdAndUpdate(req.user.id, req.params, {
+  user = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
     runValidators: true,
   });
