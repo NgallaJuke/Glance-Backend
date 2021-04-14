@@ -4,6 +4,7 @@ const ErrorResponse = require("../utils/errorResponse");
 const asyncHandler = require("../middleware/async");
 const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
 const {
@@ -32,12 +33,16 @@ exports.Register = asyncHandler(async (req, res, next) => {
   SetUserProfil(userName, user);
   // create the mail : message and the url to redirect the user
   const fakeToken = user.getRegisterToken();
+
+  //"validateBeforeSave" if set to true will run a validation before the user is saved to the database and not if set to false
   await user.save({ validateBeforeSave: false });
+
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/api/v1/auth/confirm-register/${fakeToken}`;
+
   const message = `
-  <h2>PLease confirm you registration by making a PUT request to this URL.</h2>\n
+  <h2>Please confirm you registration by making a PUT request to this URL.</h2>\n
   <form
       action="${resetURL}"
       method="post"
@@ -74,6 +79,7 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   if (!user) return next(new ErrorResponse("Invalid", 400));
   user.RegisterToken = undefined;
   user.confirmRegisterExpire = undefined;
+
   //put the user in the whitelist
   let stream = fs.createWriteStream(
     path.join(__dirname, "../config/whitelist.txt"),
@@ -81,11 +87,12 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
   );
   stream.write(user.jti + "\n");
   stream.end();
+
   // save the user
   await user.save();
+
   // reset the UserProfile in Redis
   SetUserProfil(user.userName, user);
-
   SendTokentoCookieResponse(user, 200, res);
 });
 
@@ -109,9 +116,12 @@ exports.Login = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("Please provide and email and a password", 400)
     );
+
   //find the user with that email
+
   const user = await User.findOne({ email }).select("+password");
   // check if the user as confirm is registration
+  if (!user) return next(new ErrorResponse("Invalid credentials", 401));
   if (user.RegisterToken)
     return next(
       new ErrorResponse(
@@ -119,20 +129,22 @@ exports.Login = asyncHandler(async (req, res, next) => {
         401
       )
     );
-  if (!user) return next(new ErrorResponse("Invalid credentials", 401));
+
   //Compare the user's password to the user's password saved in the database using the methods created at the User Model
   const pwdMatches = await user.matchPassword(password);
   if (!pwdMatches) return next(new ErrorResponse("Invalid credentials", 401));
   user.jti = crypto.randomBytes(20).toString("hex");
   await user.save();
   SetUserProfil(user.userName, user);
+
+  //save the user's jti to the whitelist. The Whitelist registers all the online users
   let stream = fs.createWriteStream(
     path.join(__dirname, "../config/whitelist.txt"),
     { flags: "a" }
   );
-
   stream.write(user.jti + "\n");
   stream.end();
+
   SendTokentoCookieResponse(user, 200, res);
 });
 
@@ -237,6 +249,31 @@ exports.ResetPassword = asyncHandler(async (req, res, next) => {
   SendTokentoCookieResponse(user, 200, res);
 });
 
+// @desc    Change Password
+// @route   PUT /api/v1/auth/change-password
+// @access  Private
+exports.ChangePassword = asyncHandler(async (req, res, next) => {
+  // get hashed token
+  const user = await User.findById(req.user.id).select("+password");
+  if (!user) return next(new ErrorResponse("The User is not found", 404));
+  // Set new password
+  console.log("req.body", req.body);
+
+  let { oldPassword, newPassword } = req.body;
+  console.log("oldPassword", oldPassword);
+  console.log("newPassword", newPassword);
+  const pwdMatches = await user.matchPassword(oldPassword);
+  //find if the current passord or old password match to the saved user's one
+  if (!pwdMatches)
+    return next(new ErrorResponse("Current Password Not Valid", 401));
+
+  user.password = newPassword;
+  await user.save(); //the pre.save methode on the user's Schema will hash the new password
+  // reset the UserProfile in Redis
+  SetUserProfil(user.userName, user);
+  res.status(200).json({ success: true, UserProfil: user });
+});
+
 /* ------------------------------------------------------ */
 
 // fonction to create the token send it via cookie to the Headers
@@ -244,7 +281,7 @@ const SendTokentoCookieResponse = async (user, status, res) => {
   //get the token from the methods we created at the User Model: getSignedJWTtoken()
   const token = await user.getSignedJWTtoken();
   //options for the cookie
-  // process.env.JWT_COOK_EXP is in Day so trun in into ms
+  // process.env.JWT_COOK_EXP is in Day so we turns it into ms
   const options = {
     expires: new Date(
       Date.now() + process.env.JWT_COOK_EXP * 24 * 60 * 60 * 1000
