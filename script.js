@@ -131,6 +131,9 @@ client.on("ready", async function () {
 //Flush all Redis database
 // # node script -f
 
+// //Impostuser profil on Database
+// # node script -i -u
+
 // //Delete All user profil on Redis & Database
 // # node script -d -au
 

@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const path = require("path");
-const { kMaxLength } = require("buffer");
 
 /* 
 TODO: 
@@ -36,22 +35,26 @@ const UserSchema = new mongoose.Schema({
     type: String,
     maxlength: 150,
   },
+  location: {
+    type: String,
+    maxlength: 60,
+  },
   about_user: {
     type: String,
     maxlength: 500,
   },
   interest: [String],
-  socials: [
-    {
-      twitter: { type: String },
-      facebook: { type: String },
-      instagram: { type: String },
-      github: { type: String },
-      linkedin: { type: String },
-      dribbble: { type: String },
-      behance: { type: String },
-    },
-  ],
+  socials: {
+    twitter: { type: String },
+    facebook: { type: String },
+    instagram: { type: String },
+    github: { type: String },
+    linkedin: { type: String },
+    dribbble: { type: String },
+    behance: { type: String },
+  },
+
+  website: { type: String, maxlength: 60 },
   password: {
     type: String,
     required: [true, "Please add a password"],
@@ -131,7 +134,7 @@ const user = new User.create({...})
 
 // incrypt password using bcript
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) next();
+  if (!this.isModified("password")) return next();
 
   // gen the salt
   const salt = await bcrypt.genSalt(10);
@@ -139,6 +142,7 @@ UserSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   this.user_secret = crypto.randomBytes(20).toString("hex");
   this.jti = crypto.randomBytes(20).toString("hex");
+  return next();
 });
 
 // Sign JWT an return
