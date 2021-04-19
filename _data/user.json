@@ -15,17 +15,15 @@
     "role": "tailor",
     "password": "test123",
     "interest": ["women", "mode", "africa"],
-    "socials": [
-      {
-        "twitter": "",
-        "facebook": "",
-        "instagram": "",
-        "github": "",
-        "linkedin": "",
-        "dribbble": "",
-        "behance": ""
-      }
-    ],
+    "socials": {
+      "twitter": "",
+      "facebook": "",
+      "instagram": "",
+      "github": "",
+      "linkedin": "",
+      "dribbble": "",
+      "behance": ""
+    },
     "bio": "This is Sarah's Bio so pay attention"
   },
   {
@@ -44,17 +42,15 @@
     "role": "tailor",
     "password": "test123",
     "interest": ["anime", "weeb", "manga", "comics", "marvel"],
-    "socials": [
-      {
-        "twitter": "",
-        "facebook": "",
-        "instagram": "",
-        "github": "",
-        "linkedin": "",
-        "dribbble": "",
-        "behance": ""
-      }
-    ],
+    "socials": {
+      "twitter": "",
+      "facebook": "",
+      "instagram": "",
+      "github": "",
+      "linkedin": "",
+      "dribbble": "",
+      "behance": ""
+    },
     "bio": "What is sadness? It's when your favourite character dies in a manga"
   },
   {
@@ -73,17 +69,15 @@
     "role": "tailor",
     "password": "test123",
     "interest": ["dcComic", "weeb", "comics", "marvel"],
-    "socials": [
-      {
-        "twitter": "",
-        "facebook": "",
-        "instagram": "",
-        "github": "",
-        "linkedin": "",
-        "dribbble": "",
-        "behance": ""
-      }
-    ],
+    "socials": {
+      "twitter": "",
+      "facebook": "",
+      "instagram": "",
+      "github": "",
+      "linkedin": "",
+      "dribbble": "",
+      "behance": ""
+    },
     "bio": "Looking ahead to be a Mangaka! One of the GREATEST"
   },
   {
@@ -102,17 +96,15 @@
     "role": "tailor",
     "password": "test123",
     "interest": ["nature", "robot", "war", "comics", "marvel"],
-    "socials": [
-      {
-        "twitter": "",
-        "facebook": "",
-        "instagram": "",
-        "github": "",
-        "linkedin": "",
-        "dribbble": "",
-        "behance": ""
-      }
-    ],
+    "socials": {
+      "twitter": "",
+      "facebook": "",
+      "instagram": "",
+      "github": "",
+      "linkedin": "",
+      "dribbble": "",
+      "behance": ""
+    },
     "bio": "The true soldier fights not because he hates what is in front of him, but because he loves what is behind him"
   }
 ]

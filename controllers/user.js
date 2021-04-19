@@ -246,6 +246,8 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
   if (!user) {
     return next(new ErrorResponse("Access not authorize", 401));
   }
+
+  //delete all element is body that are empty because the user didn't feel then up
   Object.keys(req.body).forEach(k => req.body[k] === "" && delete req.body[k]);
   user.updatedAt = Date.now;
   user = await User.findByIdAndUpdate(req.user.id, req.body, {
