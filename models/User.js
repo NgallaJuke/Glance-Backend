@@ -6,7 +6,7 @@ const path = require("path");
 
 /* 
 TODO: 
- - Add Description/Biographie for the user to add later... 
+ 
  - Add Tags ( what he is doing like which style he is working on... related to the Tags When Creating a Post)
  - Add Location, Phone Number  
  - Add Social Media 
@@ -27,6 +27,34 @@ const UserSchema = new mongoose.Schema({
     unique: [true, "this userName is already exist"],
     required: [true, "Please add your userName"],
   },
+  displayName: {
+    type: String,
+    maxlength: 30,
+  },
+  bio: {
+    type: String,
+    maxlength: 150,
+  },
+  location: {
+    type: String,
+    maxlength: 60,
+  },
+  about_user: {
+    type: String,
+    maxlength: 500,
+  },
+  interest: [String],
+  socials: {
+    twitter: { type: String },
+    facebook: { type: String },
+    instagram: { type: String },
+    github: { type: String },
+    linkedin: { type: String },
+    dribbble: { type: String },
+    behance: { type: String },
+  },
+
+  website: { type: String, maxlength: 60 },
   password: {
     type: String,
     required: [true, "Please add a password"],
@@ -98,7 +126,7 @@ const UserSchema = new mongoose.Schema({
 const user = new User.create({...})
 ....... user.createToken
 
--STATICS are called in the model itself -> here create is a STATIC
+-STATICS are called in the model itself -> here create is a STATIC -> create is a static 
 -METHODS are called in what you initialize on the model 
   or get from the model -> createToken is a methode
 */
@@ -106,7 +134,7 @@ const user = new User.create({...})
 
 // incrypt password using bcript
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) next();
+  if (!this.isModified("password")) return next();
 
   // gen the salt
   const salt = await bcrypt.genSalt(10);
@@ -114,6 +142,7 @@ UserSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
   this.user_secret = crypto.randomBytes(20).toString("hex");
   this.jti = crypto.randomBytes(20).toString("hex");
+  return next();
 });
 
 // Sign JWT an return

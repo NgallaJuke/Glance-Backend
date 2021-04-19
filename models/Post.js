@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+var User = require("mongoose").model("User");
 
 const PostSchema = new mongoose.Schema({
   picture: [{ type: String, require: [true, "Please add photo"] }],
@@ -42,4 +43,21 @@ const PostSchema = new mongoose.Schema({
 //   await this.model("Comment").deleteMany({ post: this._id });
 //   next();
 // });
+
+PostSchema.statics.findByUsername = async function (username, limit) {
+  var query = this.find();
+  const user = await User.findOne({ userName: username });
+  if (user) {
+    if (limit === "all") {
+      const posts = await query.where({ user: user._id });
+      return posts;
+    } else {
+      const posts = await query
+        .where({ user: user._id })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+      return posts;
+    }
+  }
+};
 module.exports = mongoose.model("Post", PostSchema);

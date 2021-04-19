@@ -38,7 +38,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
   } else {
     let count = 0;
     // save the files image
-    Array.from(req.files.picture).forEach((file) => {
+    Array.from(req.files.picture).forEach(file => {
       fileCheck(req.user.name, file, count, picture, error);
       count++;
       // move the file
@@ -46,7 +46,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     });
     if (error) return console.log("Error :", error);
     //move all the files to public folder Later cahnge this part to save the file in AWS
-    files.forEach((file) => {
+    files.forEach(file => {
       moveFileToPosts_pic(file);
     });
   }
@@ -80,17 +80,18 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       // if Redis doesn't give back the user then get him from the database
       const userdb = await User.findById(req.user.id);
       if (!userdb) return next(new ErrorResponse("User is not found", 404));
+      // Reset the User Profil in Redis in case it was lost
+      SetUserProfil(req.user.name, userdb);
       // update user own timeline
       SetUserFeed(userdb.id, post.id);
       // update the user homefeed
       SetUserHomeFeed(userdb.userName, post.id);
-      // Reset the User Profil in Redis in case it was lost
-      SetUserProfil(req.user.name, userdb);
       let UserProfil = JSON.parse(userdb);
       const followers = UserProfil.follower;
       if (followers) {
-        followers.forEach((follower) => {
+        followers.forEach(follower => {
           // Update the followers's Timeline
+          console.log("MONGO --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -102,8 +103,9 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       SetUserHomeFeed(UserProfil.userName, post.id);
       const followers = UserProfil.follower;
       if (followers) {
-        followers.forEach((follower) => {
+        followers.forEach(follower => {
           // Update the followers's Timeline
+          console.log("REDIS --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -133,9 +135,9 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/auth/post
 // @access  Public
 exports.getAllPosts = asyncHandler(async (res, next) => {
-  const post = await Post.find();
-  if (!post) return next(new ErrorResponse("Posts not found. ", 404));
-  res.status(200).json({ success: true, post });
+  const posts = await Post.find();
+  if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
+  res.status(200).json({ success: true, posts });
 });
 
 // @desc    Get A Post
@@ -157,22 +159,57 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.GetUserFeed = asyncHandler(async (req, res, next) => {
   const userTimeline = await aGetUserFeed(req.user.id, next);
-  res.status(200).json({
-    success: true,
-    timeline: userTimeline,
-  });
+  if (!userTimeline) {
+    console.log("NO TImeline in Redis");
+    const posts = await Post.find({ user: req.user.id });
+    if (!posts)
+      return next(
+        new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)
+      );
+    // In case this post where not in the cache
+    posts.forEach(post => {
+      SetPostCache(post.id, post);
+      SetUserFeed(req.user.id, post.id);
+    });
+    res.status(200).json({ success: true, timeline: posts });
+  } else {
+    console.log("YES TImeline in Redis");
+
+    res.status(200).json({
+      success: true,
+      timeline: userTimeline,
+    });
+  }
 });
 
 // @desc    Get User's HomeFeed
-// @route   GET /api/v1/post/:userName/home-timeline?limit
+// @route   GET /api/v1/post/:userName/home-timeline?limit=
 // @access  Private
 exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
   let limit = +req.query.limit;
   if (!limit) {
     limit = "all";
   }
-
   const userHomeFeed = await aGetUserHomeFeed(req.params.userName, limit, next);
+  //In case the HomeFeed was lost
+  if (!userHomeFeed) {
+    let posts;
+    if (limit === "all") {
+      posts = await Post.findByUsername(req.params.userName);
+    } else {
+      posts = await Post.findByUsername(req.params.userName);
+    }
+    if (!posts)
+      return next(
+        new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)
+      );
+    // In case this post where not in the cache
+    posts.forEach(post => {
+      SetPostCache(post._id, post);
+      SetUserHomeFeed(req.params.userName, post.id);
+    });
+    return res.status(200).json({ success: true, timeline: posts });
+  }
   res.status(200).json({
     success: true,
     timeline: userHomeFeed,
@@ -186,8 +223,8 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   let post = await Post.findById(req.params.id);
   if (!post) return next(new ErrorResponse("Post not found", 404));
   if (
-    post.likes.liker.filter((liker) => liker.toString() === req.user.id)
-      .length > 0
+    post.likes.liker.filter(liker => liker.toString() === req.user.id).length >
+    0
   )
     return next(new ErrorResponse("Post already liked.", 403));
   post.likes.liker.push(req.user.id);
@@ -206,8 +243,8 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   let post = await Post.findById(req.params.id);
   if (!post) return next(new ErrorResponse("Post not found", 404));
   if (
-    !post.likes.liker.filter((liker) => liker.toString() === req.user.id)
-      .length > 0
+    !post.likes.liker.filter(liker => liker.toString() === req.user.id).length >
+    0
   )
     return next(new ErrorResponse("Post not liked.", 403));
   post.likes.liker.pull(req.user.id);
@@ -228,7 +265,7 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);
   if (!user) return next(new ErrorResponse("User not found.", 404));
   if (post.user == user.id) return next(new ErrorResponse("Owned post.", 403));
-  if (user.saved.filter((saved) => saved.toString() === req.user.id).length > 0)
+  if (user.saved.filter(saved => saved.toString() === req.user.id).length > 0)
     return next(new ErrorResponse("Post already saved.", 403));
   user.saved.push(post.id);
   // update the user in Database
@@ -289,8 +326,8 @@ const fileCheck = (userName, file, count, picture, error) => {
   picture.push(file.name);
 };
 
-const moveFileToPosts_pic = (file) => {
-  file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async (err) => {
+const moveFileToPosts_pic = file => {
+  file.mv(`${process.env.POSTS_PIC_PATH}/${file.name}`, async err => {
     if (err) {
       return next(
         new ErrorResponse(`Problem while uploading the file ${file.name}`, 500)
