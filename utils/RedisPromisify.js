@@ -29,7 +29,7 @@ exports.aGetUserProfil = async (userName, next) => {
   if (UserProfile) {
     return UserProfile;
   } else {
-    return next(new ErrorResponse("Error get cached user's profile", 500));
+    return;
   }
 };
 
@@ -37,7 +37,7 @@ exports.aGetAllUserProfil = async (req, next) => {
   let keys = await akeys("*UserProfil*");
   if (keys) {
     if (keys.includes("UserProfil:undefined"))
-      keys = keys.filter((key) => key !== "UserProfil:undefined");
+      keys = keys.filter(key => key !== "UserProfil:undefined");
     let i = 0;
     let users = [];
     for (const key in keys) {
@@ -55,7 +55,7 @@ exports.aGetAllUserProfil = async (req, next) => {
       }
     }
   } else {
-    return next(new ErrorResponse("Error get cached users profiles", 500));
+    return;
   }
 };
 
@@ -70,12 +70,20 @@ exports.aGetPostCache = async (postID, next) => {
 
 exports.aGetUserFeed = async (userID, next) => {
   const postIDs = await ahgetall(`UserFeeds:${userID}`);
+<<<<<<< HEAD
   if (!postIDs) return next(new ErrorResponse("TimeLine Is Empty !", 500));
+=======
+
+  if (!postIDs) return;
+>>>>>>> AddRedis
   let userTimeline = [];
   for (const postId in postIDs) {
     if (postIDs.hasOwnProperty(postId)) {
       const element = postIDs[postId];
-      const cachedPost = await ahget("Posts", `PostId:${element}`);
+      const cachedPost = await ahget(
+        "Posts",
+        `PostId:${element.replace(/['"]+/g, "")}`
+      );
       if (!cachedPost)
         return next(new ErrorResponse("Error getting cached post", 500));
       let newPost = JSON.parse(cachedPost);
@@ -97,7 +105,9 @@ exports.aGetUserFeed = async (userID, next) => {
 exports.aGetUserHomeFeed = async (userName, limit, next) => {
   const user = await aget(`UserProfil:${userName}`);
   const postIDs = await ahgetall(`UserHomeFeeds:${userName}`);
+  if (!postIDs) return;
   let userHomeFeed = [];
+  //limmit === 'all' give all the post made by the user and limit === 4 gives the last 4 posts made by the user
   if (limit === "all") {
     for (const postId in postIDs) {
       if (postIDs.hasOwnProperty(postId)) {
@@ -140,11 +150,11 @@ exports.aGetUserHomeFeed = async (userName, limit, next) => {
   }
 };
 
-exports.DeletePostsCache = (postID) => {
+exports.DeletePostsCache = postID => {
   client.hdel("Posts", `PostId:${postID}`);
 };
 
-exports.DeleteUserProfil = (userName) => {
+exports.DeleteUserProfil = userName => {
   const userKey = `UserProfil:${userName}`;
   client.DEL(userKey);
 };

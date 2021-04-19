@@ -12,16 +12,21 @@ const {
 // @route   GET /api/v1/users
 // @access  Private
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
-  const usersRedis = await aGetAllUserProfil(req, next);
-  if (usersRedis) {
-    res.status(200).json({ success: true, users: usersRedis });
-  } else {
-    const userdb = await User.find();
-    if (!userdb) {
-      return next(new ErrorResponse("User not found in DB.", 404));
-    }
-    res.status(200).json({ success: true, users: userdb });
+  // const usersRedis = await aGetAllUserProfil(req, next);
+  // if (usersRedis) {
+  //   console.log("REDIS");
+  //   res.status(200).json({ success: true, users: usersRedis });
+  // } else {
+  const usersdb = await User.find();
+  if (!usersdb) {
+    return next(new ErrorResponse("User not found in DB.", 404));
   }
+  console.log("MONGO");
+  usersdb.forEach(user => {
+    SetUserProfil(user.userName, user);
+  });
+  res.status(200).json({ success: true, users: usersdb });
+  // }
 });
 
 // @desc    Get A User
@@ -32,11 +37,12 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   if (user) {
     res.status(200).json({ success: true, UserProfil: JSON.parse(user) });
   } else {
-    const userdb = await User.findOne(req.params.userName);
+    const userdb = await User.findOne({ userName: req.params.userName });
     if (!userdb) {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
-    res.status(200).json({ success: true, UserProfil: user });
+    SetUserProfil(userdb.userName, userdb);
+    res.status(200).json({ success: true, UserProfil: userdb });
   }
 });
 
@@ -85,13 +91,13 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Followed user not found.", 404));
 
   if (
-    followed.follower.filter((follower) => follower.toString() === req.user.id)
+    followed.follower.filter(follower => follower.toString() === req.user.id)
       .length > 0
   )
     return next(new ErrorResponse("User already followed.", 403));
 
   if (
-    followed.blockedBy.filter((blocker) => blocker.toString() === req.user.id)
+    followed.blockedBy.filter(blocker => blocker.toString() === req.user.id)
       .length > 0
   )
     return next(
@@ -133,7 +139,7 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("User not found", 404));
   // check if the connected user is following this user
   if (
-    user.following.filter((following) => following.toString() === req.params.id)
+    user.following.filter(following => following.toString() === req.params.id)
       .length === 0
   )
     return next(new ErrorResponse("User is not followed", 403));
@@ -169,7 +175,7 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
   let blocked = await User.findById(req.params.id);
   if (!blocked) return next(new ErrorResponse("Blocked User not found", 404));
   if (
-    blocked.blockedBy.filter((blocker) => blocker.toString() === req.user.id)
+    blocked.blockedBy.filter(blocker => blocker.toString() === req.user.id)
       .length > 0
   )
     return next(new ErrorResponse("User already blocked", 403));
@@ -210,7 +216,7 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
   if (!blocked) return next(new ErrorResponse("Blocked User not found", 404));
   if (
     (blocked.blockedBy.filter(
-      (blocker) => blocker.toString() === req.user.id
+      blocker => blocker.toString() === req.user.id
     ).length = 0)
   )
     return next(new ErrorResponse("User in not blocked", 403));
@@ -240,8 +246,11 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
   if (!user) {
     return next(new ErrorResponse("Access not authorize", 401));
   }
+
+  //delete all element is body that are empty because the user didn't feel then up
+  Object.keys(req.body).forEach(k => req.body[k] === "" && delete req.body[k]);
   user.updatedAt = Date.now;
-  user = await User.findByIdAndUpdate(req.user.id, req.params, {
+  user = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
     runValidators: true,
   });
@@ -250,57 +259,26 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    User Change Profile Picture
-// @route   PUT /api/v1/user/update-avatar
+// @route   PUT /api/v1/user/update-avatar?reset=
 // @access  Private
 exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
-  const user = await aGetUserProfil(req.user.name, next);
-  if (user) {
-    if (!req.files) {
-      return next(new ErrorResponse("Please add a photo", 400));
-    }
-    const file = req.files.file;
-    // make sure the file is an image
-    if (!file.mimetype.startsWith("image"))
-      return next(new ErrorResponse("Please upload an image file", 403));
-    // make sure the image is not an gif
-    if (file.mimetype === "image/gif")
-      return next(new ErrorResponse("Gif image are not allow", 403));
-    // check file size
-    if (file.size > process.env.MAX_PIC_SIZE)
-      return next(
-        new ErrorResponse(
-          `Please upload an image less than ${process.env.MAX_PIC_SIZE}Mb`,
-          400
-        )
-      );
-    // Create costume file name
-    file.name = `avatar_${req.user.name}_${Date.now()}${
-      path.parse(file.name).ext
-    }`;
-    // move the file in public/avatars
-    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
-      if (err) {
-        return next(
-          new ErrorResponse("Probleme while uploading the file", 500)
-        );
+  if (req.query.reset === "yes") {
+    // insert the filemane in the database
+    const userdb = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        avatar: path.join(__dirname + `../../public/avatars/default.png`),
+      },
+      {
+        new: true,
+        runValidators: true,
       }
-
-      //write back teh user profile
-      // insert the filemane path in the database
-      const user = await User.findByIdAndUpdate(
-        req.user.id,
-        {
-          avatar: path.join(__dirname + `../../public/avatars/${file.name}`),
-        },
-        {
-          new: true,
-          runValidators: true,
-        }
-      );
-      // reset the user Redis profile
-      SetUserProfil(req.user.name, user);
-      res.status(200).json({ success: true, user });
-    });
+    );
+    if (!userdb) {
+      return next(new ErrorResponse("User not found in DB.", 404));
+    }
+    SetUserProfil(req.user.name, userdb);
+    res.status(200).json({ success: true, user: userdb });
   } else {
     if (!req.files) {
       return next(new ErrorResponse("Please add a photo", 400));
@@ -326,7 +304,7 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
     }`;
 
     // move the file in public/avatars
-    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async (err) => {
+    file.mv(`${process.env.AVATAR_PIC_PATH}/${file.name}`, async err => {
       if (err) {
         return next(
           new ErrorResponse("Probleme while uploading the file", 500)

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Logged Out
 Logged Out
 932be5c34698fcaa4ceef8b8774cd7e08b4c1071
@@ -12,3 +13,7 @@ Logged Out
 7d64c753e28184af480089e8a30105321f1d5b66
 caffe759971ce7f803fb022eb9cb5db44cb786c1
 62ac442d7c7eeb91386a346511541488cfc56718
+=======
+f817ce08303a7be6ac4cc533bab7b493546071d0
+0a0aeb2fabbdfda8c266a6c7aa81923398160f16
+>>>>>>> AddRedis
