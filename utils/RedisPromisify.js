@@ -70,12 +70,8 @@ exports.aGetPostCache = async (postID, next) => {
 
 exports.aGetUserFeed = async (userID, next) => {
   const postIDs = await ahgetall(`UserFeeds:${userID}`);
-<<<<<<< HEAD
-  if (!postIDs) return next(new ErrorResponse("TimeLine Is Empty !", 500));
-=======
 
   if (!postIDs) return;
->>>>>>> AddRedis
   let userTimeline = [];
   for (const postId in postIDs) {
     if (postIDs.hasOwnProperty(postId)) {
