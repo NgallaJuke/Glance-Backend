@@ -3,6 +3,7 @@ const Post = require("../models/Post");
 const {
   GetUserFeed,
   GetUserHomeFeed,
+  GetUserLikedPost,
   getAllPosts,
   CreatePost,
   DeletePost,
@@ -18,6 +19,7 @@ const { Protect, Authorize } = require("../middleware/auth");
 router.route("/").get(getAllPosts);
 router.route("/timeline").get(Protect, GetUserFeed);
 router.route("/:userName/home-timeline").get(Protect, GetUserHomeFeed);
+router.route("/like/:id").get(Protect, GetUserLikedPost);
 router.route("/create").post(Protect, Authorize("tailor"), CreatePost);
 router.route("/delete").delete(Protect, Authorize("tailor"), DeletePost);
 router.route("/:id").get(GetSinglePost);
