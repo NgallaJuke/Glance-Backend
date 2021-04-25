@@ -216,6 +216,19 @@ exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
   });
 });
 
+// @desc    Get User's Liked Posts
+// @route   GET /api/v1/post//like/:id
+// @access  Private
+exports.GetUserLikedPost = asyncHandler(async (req, res, next) => {
+  const posts = await Post.find({
+    user: { $ne: req.params.id },
+    "likes.liker": req.params.id,
+  });
+  if (!posts) return next(new ErrorResponse("Post not found", 404));
+
+  res.status(200).json({ success: true, likedPost: posts });
+});
+
 // // @desc    Like A Post
 // // @route   PUT /api/v1/post/:id/like
 // // @access  Private
