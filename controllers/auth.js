@@ -29,25 +29,25 @@ exports.Register = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("Internal Error while creating the user", 500)
     );
-  // Set the UserProfile in the cache
-  SetUserProfil(userName, user);
   // create the mail : message and the url to redirect the user
   const fakeToken = user.getRegisterToken();
-
-  //"validateBeforeSave" if set to true will run a validation before the user is saved to the database and not if set to false
-  await user.save({ validateBeforeSave: false });
 
   const resetURL = `${req.protocol}://${req.get(
     "host"
   )}/api/v1/auth/confirm-register/${fakeToken}`;
 
   const message = `
-  <h2>Please confirm you registration by making a PUT request to this URL.</h2>\n
-  <form
+  <h2>Please confirm you registration.</h2>\n
+  <form 
+      target="_blank"
       action="${resetURL}"
       method="post"
     >
-      <input type="submit" />
+      <input style='padding: 10px 20px;
+  background-color: dodgerblue;
+  border: 1px solid #ddd;
+  color: white;
+  cursor: pointer;' type="submit" value="Confirm" />
     </form>
   `;
   try {
@@ -56,6 +56,12 @@ exports.Register = asyncHandler(async (req, res, next) => {
       subject: "Confirm Registration",
       message,
     });
+
+    // Set the UserProfile in the cache
+    SetUserProfil(userName, user);
+    //"validateBeforeSave" if set to true will run a validation before the user is saved to the database and not if set to false
+    await user.save({ validateBeforeSave: true });
+
     res.status(200).json({ success: true, data: "Email sent" });
   } catch (error) {
     console.log(error);
@@ -257,16 +263,11 @@ exports.ChangePassword = asyncHandler(async (req, res, next) => {
   const user = await User.findById(req.user.id).select("+password");
   if (!user) return next(new ErrorResponse("The User is not found", 404));
   // Set new password
-  console.log("req.body", req.body);
-
   let { oldPassword, newPassword } = req.body;
-  console.log("oldPassword", oldPassword);
-  console.log("newPassword", newPassword);
   const pwdMatches = await user.matchPassword(oldPassword);
   //find if the current passord or old password match to the saved user's one
   if (!pwdMatches)
     return next(new ErrorResponse("Current Password Not Valid", 401));
-
   user.password = newPassword;
   await user.save(); //the pre.save methode on the user's Schema will hash the new password
   // reset the UserProfile in Redis
@@ -293,5 +294,5 @@ const SendTokentoCookieResponse = async (user, status, res) => {
     .status(status)
     .cookie("token", token, options)
     .header("Authorization", "Bearer " + token)
-    .json({ success: true, token });
+    .redirect(`${process.env.FRONTEND_URI}?token=${token}`);
 };
