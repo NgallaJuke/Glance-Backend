@@ -37,12 +37,16 @@ const PostSchema = new mongoose.Schema({
 });
 
 //Cascade Delete Comments when deleting a Post /// we don't really wont to do that
-// PostSchema.pre("remove", async function (next) {
-//   console.log("comment and user been remove from post", this._id);
+PostSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function (next) {
+    console.log(`Comment being removed from Post ${this._id}`);
+    await this.model("Comment").deleteMany({ post: this._id });
 
-//   await this.model("Comment").deleteMany({ post: this._id });
-//   next();
-// });
+    next();
+  }
+);
 
 PostSchema.statics.findByUsername = async function (username, limit) {
   var query = this.find();

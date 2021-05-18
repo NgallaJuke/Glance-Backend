@@ -80,8 +80,7 @@ exports.aGetUserFeed = async (userID, next) => {
         "Posts",
         `PostId:${element.replace(/['"]+/g, "")}`
       );
-      if (!cachedPost)
-        return next(new ErrorResponse("Error getting cached post", 500));
+      if (!cachedPost) continue;
       let newPost = JSON.parse(cachedPost);
       //check if the post is own by a followed user. If not then remove it from the timeline
       const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
@@ -92,10 +91,10 @@ exports.aGetUserFeed = async (userID, next) => {
       // TODO : if the user ont folowed anymore rmeove his post from the timeline
       userTimeline.push(newPost);
 
-      if (userTimeline.length === Object.keys(postIDs).length)
-        return userTimeline;
+      if (userTimeline.length === Object.keys(postIDs).length) break;
     }
   }
+  return userTimeline;
 };
 
 exports.aGetUserHomeFeed = async (userName, limit, next) => {
@@ -110,17 +109,17 @@ exports.aGetUserHomeFeed = async (userName, limit, next) => {
         const element = postIDs[postId];
         const cachedPost = await ahget("Posts", `PostId:${element}`);
         if (!cachedPost) {
-          return next(new ErrorResponse("Error getting cached post", 500));
+          continue;
         } else {
           let newPost = JSON.parse(cachedPost);
           // here we upadate the postOwner Propreties in case he changed his avatar for example
           newPost.postOwner = JSON.parse(user);
           userHomeFeed.push(newPost);
-          if (userHomeFeed.length === Object.keys(postIDs).length)
-            return userHomeFeed;
+          if (userHomeFeed.length === Object.keys(postIDs).length) break;
         }
       }
     }
+    return userHomeFeed;
   } else {
     let arr = [];
     for (const postId in postIDs) {
@@ -130,7 +129,7 @@ exports.aGetUserHomeFeed = async (userName, limit, next) => {
       const element = postIDs[arr[n]];
       const cachedPost = await ahget("Posts", `PostId:${element}`);
       if (!cachedPost) {
-        return next(new ErrorResponse("Error getting cached post", 500));
+        continue;
       } else {
         let newPost = JSON.parse(cachedPost);
         // here we upadate the postOwner Propreties in case he changed his avatar for example
@@ -140,9 +139,10 @@ exports.aGetUserHomeFeed = async (userName, limit, next) => {
           userHomeFeed.length === Object.keys(postIDs).length ||
           userHomeFeed.length === limit
         )
-          return userHomeFeed.reverse();
+          break;
       }
     }
+    return userHomeFeed.reverse();
   }
 };
 

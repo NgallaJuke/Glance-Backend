@@ -118,17 +118,17 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Delete A Post
-// @route   DELETE /api/v1/post/delete
+// @route   DELETE /api/v1/post/:id/delete
 // @access  Private/Tailors
 exports.DeletePost = asyncHandler(async (req, res, next) => {
-  const post = await Post.findOne({ user: req.user.id });
+  const post = await Post.findById(req.params.id);
   if (!post)
     return next(
       new ErrorResponse("User not authorize to make this request", 401)
     );
   DeletePostsCache(post.id);
   post.deleteOne();
-  res.status(200).json({ success: true, post: "the Post has been deleted." });
+  res.status(200).json({ success: true, message: "Post Deleted" });
 });
 
 // @desc    Get All Posts

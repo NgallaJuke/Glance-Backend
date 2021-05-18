@@ -21,7 +21,7 @@ router.route("/timeline").get(Protect, GetUserFeed);
 router.route("/:userName/home-timeline").get(Protect, GetUserHomeFeed);
 router.route("/like/:id").get(Protect, GetUserLikedPost);
 router.route("/create").post(Protect, Authorize("tailor"), CreatePost);
-router.route("/delete").delete(Protect, Authorize("tailor"), DeletePost);
+router.route("/:id/delete").delete(Protect, Authorize("tailor"), DeletePost);
 router.route("/:id").get(GetSinglePost);
 router.route("/:id/like").put(Protect, LikePost);
 router.route("/:id/unlike").put(Protect, UnlikePost);

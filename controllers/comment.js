@@ -73,7 +73,7 @@ exports.DeleteComment = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("Internal Error Comment Not found In DB", 500)
     );
-  await comment.remove();
+  await comment.deleteOne();
   const postdb = await Post.findById(req.params.postID);
   if (!postdb)
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));

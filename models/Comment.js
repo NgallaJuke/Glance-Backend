@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const User = require("./User");
+const Post = require("./Post");
 
 const CommentSchema = new mongoose.Schema({
   comment: { type: String, require: [true, "Comment must have text contend"] },
@@ -24,23 +26,28 @@ const CommentSchema = new mongoose.Schema({
   },
 });
 
-CommentSchema.pre("remove", async function (next) {
-  await this.model("Post").updateOne(
-    { _id: this.post },
-    {
-      $pull: { "comments.comment": this._id },
-      $inc: { "comments.count": -1 },
-    },
-    { new: true, runValidators: true }
-  );
-  await this.model("User").updateOne(
-    { _id: this.user },
-    {
-      $pull: { "comments.comment": this._id },
-      $inc: { "comments.count": -1 },
-    },
-    { new: true, runValidators: true }
-  );
-  next();
-});
+CommentSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function (next) {
+    await Post.updateOne(
+      { _id: this.post },
+      {
+        $pull: { "comments.comment": this._id },
+        $inc: { "comments.count": -1 },
+      },
+      { new: true, runValidators: true }
+    );
+    await User.updateOne(
+      { _id: this.user },
+      {
+        $pull: { "comments.comment": this._id },
+        $inc: { "comments.count": -1 },
+      },
+      { new: true, runValidators: true }
+    );
+    next();
+  }
+);
+
 module.exports = mongoose.model("Comment", CommentSchema);

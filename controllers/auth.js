@@ -61,7 +61,6 @@ exports.Register = asyncHandler(async (req, res, next) => {
     SetUserProfil(userName, user);
     //"validateBeforeSave" if set to true will run a validation before the user is saved to the database and not if set to false
     await user.save({ validateBeforeSave: true });
-
     res.status(200).json({ success: true, data: "Email sent" });
   } catch (error) {
     console.log(error);
@@ -99,13 +98,13 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
 
   // reset the UserProfile in Redis
   SetUserProfil(user.userName, user);
-  SendTokentoCookieResponse(user, 200, res);
+  SendTokentoCookieResponse(user, true, 200, res);
 });
 
 // @desc    Delete User Account
 // @route   DELETE /api/v1/auth/users/delete
 // @access  Private
-exports.deleteUser = asyncHandler(async (req, res) => {
+exports.DeleteUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndDelete(req.user.id);
   DeleteUserProfil(req.user.name);
   res.status(200).json({ success: true, message: "User Deleted Succesfully" });
@@ -151,7 +150,7 @@ exports.Login = asyncHandler(async (req, res, next) => {
   stream.write(user.jti + "\n");
   stream.end();
 
-  SendTokentoCookieResponse(user, 200, res);
+  SendTokentoCookieResponse(user, false, 200, res);
 });
 
 // @desc    Logout User
@@ -252,7 +251,7 @@ exports.ResetPassword = asyncHandler(async (req, res, next) => {
   // reset the UserProfile in Redis
   SetUserProfil(user.userName, user);
 
-  SendTokentoCookieResponse(user, 200, res);
+  SendTokentoCookieResponse(user, false, 200, res);
 });
 
 // @desc    Change Password
@@ -278,7 +277,12 @@ exports.ChangePassword = asyncHandler(async (req, res, next) => {
 /* ------------------------------------------------------ */
 
 // fonction to create the token send it via cookie to the Headers
-const SendTokentoCookieResponse = async (user, status, res) => {
+const SendTokentoCookieResponse = async (
+  user,
+  newUser = false,
+  status,
+  res
+) => {
   //get the token from the methods we created at the User Model: getSignedJWTtoken()
   const token = await user.getSignedJWTtoken();
   //options for the cookie
@@ -290,9 +294,18 @@ const SendTokentoCookieResponse = async (user, status, res) => {
     httpOnly: true,
   };
   if (process.env.NODE_ENV === "production") options.secure = true;
-  res
-    .status(status)
-    .cookie("token", token, options)
-    .header("Authorization", "Bearer " + token)
-    .redirect(`${process.env.FRONTEND_URI}?token=${token}`);
+
+  if (newUser) {
+    res
+      .status(status)
+      .cookie("token", token, options)
+      .header("Authorization", "Bearer " + token)
+      .redirect(`${process.env.FRONTEND_URI}?token=${token}`);
+  } else {
+    res
+      .status(status)
+      .cookie("token", token, options)
+      .header("Authorization", "Bearer " + token)
+      .json({ success: true, token });
+  }
 };
