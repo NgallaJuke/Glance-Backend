@@ -105,7 +105,9 @@ exports.ConfirmRegister = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/v1/auth/users/delete
 // @access  Private
 exports.DeleteUser = asyncHandler(async (req, res) => {
-  const user = await User.findByIdAndDelete(req.user.id);
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new ErrorResponse("Invalid credentials", 401));
+  await user.deleteOne();
   DeleteUserProfil(req.user.name);
   res.status(200).json({ success: true, message: "User Deleted Succesfully" });
 });

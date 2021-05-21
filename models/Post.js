@@ -41,9 +41,15 @@ PostSchema.pre(
   "deleteOne",
   { document: true, query: false },
   async function (next) {
-    console.log(`Comment being removed from Post ${this._id}`);
     await this.model("Comment").deleteMany({ post: this._id });
-
+    next();
+  }
+);
+PostSchema.pre(
+  "deleteMany",
+  { document: true, query: false },
+  async function (next) {
+    await this.model("Comment").deleteMany({ post: this._id });
     next();
   }
 );

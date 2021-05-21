@@ -45,13 +45,13 @@ const UserSchema = new mongoose.Schema({
   },
   interest: [String],
   socials: {
-    twitter: { type: String },
-    facebook: { type: String },
-    instagram: { type: String },
-    github: { type: String },
-    linkedin: { type: String },
-    dribbble: { type: String },
-    behance: { type: String },
+    twitter: { type: String, default: "" },
+    facebook: { type: String, default: "" },
+    instagram: { type: String, default: "" },
+    github: { type: String, default: "" },
+    linkedin: { type: String, default: "" },
+    dribbble: { type: String, default: "" },
+    behance: { type: String, default: "" },
   },
 
   website: { type: String, maxlength: 60 },
@@ -144,6 +144,17 @@ UserSchema.pre("save", async function (next) {
   this.jti = crypto.randomBytes(20).toString("hex");
   return next();
 });
+
+//Cascade Delete Posts and Comments of user!
+UserSchema.pre(
+  "deleteOne",
+  { document: true, query: false },
+  async function (next) {
+    await this.model("Post").deleteMany({ user: this._id });
+    await this.model("Comment").deleteMany({ user: this._id });
+    next();
+  }
+);
 
 // Sign JWT an return
 UserSchema.methods.getSignedJWTtoken = function () {

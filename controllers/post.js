@@ -127,7 +127,7 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
       new ErrorResponse("User not authorize to make this request", 401)
     );
   DeletePostsCache(post.id);
-  post.deleteOne();
+  await post.deleteOne();
   res.status(200).json({ success: true, message: "Post Deleted" });
 });
 

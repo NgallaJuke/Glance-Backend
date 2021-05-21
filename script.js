@@ -15,6 +15,7 @@ dotenv.config({ path: "./config/development.env" });
 // loads models
 const User = require("./models/User");
 const Post = require("./models/Post");
+const Comment = require("./models/Comment");
 
 // connect to mongoose
 mongoose.connect(process.env.MONGO_URI, {
@@ -38,6 +39,7 @@ const importUsers = async () => {
     console.error(error);
   }
 };
+
 const deleteDbUsers = async () => {
   try {
     await User.deleteMany();
@@ -46,10 +48,20 @@ const deleteDbUsers = async () => {
     console.error(error);
   }
 };
+
 const deleteDbPost = async () => {
   try {
     await Post.deleteMany();
     console.log("Post Data Deleted Successfully in Database".red.inverse);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const deleteDbComment = async () => {
+  try {
+    await Comment.deleteMany();
+    console.log("Comment Data Deleted Successfully in Database".red.inverse);
   } catch (error) {
     console.error(error);
   }
@@ -78,7 +90,7 @@ client.on("ready", async function () {
     }
   };
 
-  //Delete al the data in the Redis Cache system
+  //Delete all the data in the Redis Cache system
   const flushRedis = async () => {
     try {
       await aflushall();
@@ -124,6 +136,10 @@ client.on("ready", async function () {
 
   //Delete all post on Redis & Database
   if (process.argv[2] === "-d" && process.argv[3] === "-dbp") deleteDbPost();
+
+  //Delete all comments on Database
+  if (process.argv[2] === "-d" && process.argv[3] === "-ac")
+    await deleteDbComment();
 });
 
 /* ------------------- NOTE -------------------  */
@@ -131,7 +147,7 @@ client.on("ready", async function () {
 //Flush all Redis database
 // # node script -f
 
-// //Impostuser profil on Database
+// //Import user profil on Database
 // # node script -i -u
 
 // //Delete All user profil on Redis & Database
@@ -151,6 +167,9 @@ client.on("ready", async function () {
 
 // //Delete all post on Redis & Database
 // # node script -d -ap
+
+// //Delete all Comment Database
+// # node script -d -ac
 
 //Delete all post on Redis
 // # node script -d -chp

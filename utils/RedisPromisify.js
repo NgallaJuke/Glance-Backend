@@ -84,11 +84,10 @@ exports.aGetUserFeed = async (userID, next) => {
       let newPost = JSON.parse(cachedPost);
       //check if the post is own by a followed user. If not then remove it from the timeline
       const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
-      if (!user)
-        return next(new ErrorResponse("Error get cached user's profil", 500));
+      if (!user) continue;
       newPost.postOwner = JSON.parse(user);
 
-      // TODO : if the user ont folowed anymore rmeove his post from the timeline
+      // TODO : if the user ont followed anymore remove his post from the timeline
       userTimeline.push(newPost);
 
       if (userTimeline.length === Object.keys(postIDs).length) break;
