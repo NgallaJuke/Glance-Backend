@@ -36,10 +36,7 @@ app.use(methodOverride("_method"));
 
 //require env variables
 dotenv.config({
-  path: `./config/${process.env.NODE_ENV.substring(
-    0,
-    process.env.NODE_ENV.length - 1
-  )}.env`,
+  path: `./config/${process.env.NODE_ENV.trim()}.env`,
 });
 
 //database connection
@@ -60,12 +57,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookie_parser());
 
 //User Morgan for dev logger
-if (
-  process.env.NODE_ENV.substring(0, process.env.NODE_ENV.length - 1) ===
-  "development"
-) {
-  app.use(morgan("dev"));
-}
+if (process.env.NODE_ENV.trim() === "development") app.use(morgan("dev"));
 
 // file Uploader
 app.use(fileupload());

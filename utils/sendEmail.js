@@ -3,7 +3,7 @@ const nodemailer = require("nodemailer");
 const sendEmail = async options => {
   // create reusable transporter object using the default SMTP transport
   let transporter = null;
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV.trim() === "development") {
     //IN development mode
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,

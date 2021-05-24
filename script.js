@@ -114,7 +114,10 @@ client.on("ready", async function () {
     deleteKey("UserProfil");
 
   //Delete All user profils on  Database
-  if (process.argv[2] === "-d" && process.argv[3] === "-dbu") deleteDbUsers();
+  if (process.argv[2] === "-d" && process.argv[3] === "-dbu") {
+    await deleteDbUsers();
+    process.exit();
+  }
 
   //Delete all users UserFeeds on Redis
   if (process.argv[2] === "-d" && process.argv[3] === "-uf")
