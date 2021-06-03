@@ -3,6 +3,7 @@ const client = require("../utils/redis");
 const ErrorResponse = require("../utils/errorResponse");
 const aget = promisify(client.get).bind(client);
 const ahget = promisify(client.hget).bind(client);
+const ahset = promisify(client.hset).bind(client);
 const ahgetall = promisify(client.hgetall).bind(client);
 const akeys = promisify(client.keys).bind(client);
 
@@ -11,17 +12,17 @@ exports.SetUserProfil = (userName, user) => {
   client.set(userKey, JSON.stringify(user));
 };
 
-exports.SetPostCache = (postID, post) => {
+exports.SetPostCache = async (postID, post) => {
   const postKey = `PostId:${postID}`;
-  client.hset("Posts", postKey, JSON.stringify(post));
+  await ahset("Posts", postKey, JSON.stringify(post));
 };
 
-exports.SetUserFeed = (userID, postID) => {
-  client.hset(`UserFeeds:${userID}`, `Post:${postID}`, postID);
+exports.SetUserFeed = async (userID, postID) => {
+  await ahset(`UserFeeds:${userID}`, `Post:${postID}`, postID);
 };
 
-exports.SetUserHomeFeed = (userName, postID) => {
-  client.hset(`UserHomeFeeds:${userName}`, `Post:${postID}`, postID);
+exports.SetUserHomeFeed = async (userName, postID) => {
+  await ahset(`UserHomeFeeds:${userName}`, `Post:${postID}`, postID);
 };
 
 exports.aGetUserProfil = async (userName, next) => {
@@ -60,7 +61,7 @@ exports.aGetAllUserProfil = async (req, next) => {
 };
 
 exports.aGetPostCache = async (postID, next) => {
-  const Post = await ahget("Posts", `PostId:${postID}`);
+  const Post = await s("Posts", `PostId:${postID}`);
   if (Post) {
     return Post;
   } else {

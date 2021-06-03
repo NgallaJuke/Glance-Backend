@@ -262,6 +262,7 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Post not liked.", 403));
   post.likes.liker.pull(req.user.id);
   post.likes.count--;
+
   // Update the post in Redis
   SetPostCache(post.id, post);
   // update on database

@@ -21,6 +21,12 @@ const PostSchema = new mongoose.Schema({
     ref: "User",
     require: true,
   },
+  viewedBy: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
   postOwner: {
     type: Object,
     require: [true, "Please add photo"],
