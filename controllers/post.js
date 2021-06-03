@@ -51,10 +51,25 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     });
   }
   // check if the description has any #(tags) in it
-  const reg = /#\S+/g;
   let tags = [];
-  if (req.body.description.match(reg)) {
-    tags = req.body.description.match(reg);
+  const reg = /#([A-Za-z0-9]+)/g;
+  if (JSON.parse(req.body.tags) && req.body.description.match(reg)) {
+    const newsTags = JSON.parse(req.body.tags).map(
+      tag => "#" + tag.toLowerCase()
+    );
+
+    if (req.body.description.match(reg)) {
+      tags = [...newsTags, ...req.body.description.match(reg)];
+    }
+  } else {
+    if (req.body.description.match(reg)) {
+      tags = [...req.body.description.match(reg)];
+    } else if (JSON.parse(req.body.tags)) {
+      const newsTags = JSON.parse(req.body.tags).map(
+        tag => "#" + tag.toLowerCase()
+      );
+      tags = [...newsTags];
+    }
   }
 
   if (picture.length === 0)
@@ -65,6 +80,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
     // Save the post to the Database
+    console.log(`tags2`, typeof tags, tags);
     const post = await Post.create({
       picture,
       description: req.body.description,
@@ -91,7 +107,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (followers) {
         followers.forEach(follower => {
           // Update the followers's Timeline
-          console.log("MONGO --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -105,7 +120,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (followers) {
         followers.forEach(follower => {
           // Update the followers's Timeline
-          console.log("REDIS --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -160,7 +174,6 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 exports.GetUserFeed = asyncHandler(async (req, res, next) => {
   const userTimeline = await aGetUserFeed(req.user.id, next);
   if (!userTimeline) {
-    console.log("NO TImeline in Redis");
     const posts = await Post.find({ user: req.user.id });
     if (!posts)
       return next(
@@ -173,8 +186,6 @@ exports.GetUserFeed = asyncHandler(async (req, res, next) => {
     });
     res.status(200).json({ success: true, timeline: posts });
   } else {
-    console.log("YES TImeline in Redis");
-
     res.status(200).json({
       success: true,
       timeline: userTimeline,
