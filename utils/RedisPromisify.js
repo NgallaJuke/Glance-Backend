@@ -61,12 +61,34 @@ exports.aGetAllUserProfil = async (req, next) => {
 };
 
 exports.aGetPostCache = async (postID, next) => {
-  const Post = await s("Posts", `PostId:${postID}`);
+  const Post = await ahget("Posts", `PostId:${postID}`);
   if (Post) {
     return Post;
   } else {
     return next(new ErrorResponse("Error get cached post", 500));
   }
+};
+
+exports.aGetHasTagPostCache = async hashtag => {
+  const postIDs = await ahgetall("Posts");
+  let hashTagPost = [];
+  for (const postId in postIDs) {
+    if (postIDs.hasOwnProperty(postId)) {
+      const element = postIDs[postId];
+      if (!element) continue;
+      let newPost = JSON.parse(element);
+      //check if the post is own by a followed user. If not then remove it from the timeline
+      const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
+      if (!user) continue;
+      newPost.postOwner = JSON.parse(user);
+      // TODO : if the user ont followed anymore remove his post from the timeline
+      if (!newPost.tags.includes(`#${hashtag}`)) continue;
+      hashTagPost.push(newPost);
+      if (hashTagPost.length === Object.keys(postIDs).length) break;
+    }
+  }
+
+  return hashTagPost;
 };
 
 exports.aGetUserFeed = async (userID, next) => {

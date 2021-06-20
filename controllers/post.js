@@ -14,12 +14,13 @@ const {
   aGetUserFeed,
   aGetUserHomeFeed,
   aGetPostCache,
+  aGetHasTagPostCache,
   DeletePostsCache,
   aGetUserProfil,
 } = require("../utils/RedisPromisify");
 
 // @desc    Create A Post
-// @route   GET /api/v1/post/create
+// @route   GET /api/v1/posts/create
 // @access  Private/Tailors
 exports.CreatePost = asyncHandler(async (req, res, next) => {
   let picture = [];
@@ -132,7 +133,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Delete A Post
-// @route   DELETE /api/v1/post/:id/delete
+// @route   DELETE /api/v1/posts/:id/delete
 // @access  Private/Tailors
 exports.DeletePost = asyncHandler(async (req, res, next) => {
   const post = await Post.findById(req.params.id);
@@ -146,12 +147,27 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get All Posts
-// @route   GET /api/v1/auth/post
+// @route   GET /api/v1/auth/posts
 // @access  Public
 exports.getAllPosts = asyncHandler(async (res, next) => {
   const posts = await Post.find();
   if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
   res.status(200).json({ success: true, posts });
+});
+
+// @desc    Get All Posts With A Hashtag
+// @route   GET /api/v1/auth/posts/hashtags/:hashtag
+// @access  Public
+exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
+  const posts = await aGetHasTagPostCache(req.params.hashtag.toLowerCase());
+  if (posts) {
+    console.log("hash tag post from ---> REDIS");
+    return res.status(200).json({ success: true, posts });
+  }
+  const postsdb = await Post.find({ tags: `#${req.params.hashtag}` });
+  console.log("hash tag post from ---> DATABASE");
+  if (!postsdb) return next(new ErrorResponse("Posts not found. ", 404));
+  return res.status(200).json({ success: true, posts: postsdb });
 });
 
 // @desc    Get A Post
