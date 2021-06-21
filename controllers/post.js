@@ -11,6 +11,7 @@ const {
   SetUserHomeFeed,
   SetUserProfil,
   SetPostCache,
+  aGetAllPosts,
   aGetUserFeed,
   aGetUserHomeFeed,
   aGetPostCache,
@@ -33,7 +34,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
   if (Array.from(req.files.picture).length === 0) {
     const file = req.files.picture;
     fileCheck(req.user.name, file, (count = 0), picture, error);
-    if (error) return console.log("Error :", error);
     // move the file
     moveFileToPosts_pic(file);
   } else {
@@ -45,7 +45,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       // move the file
       files.push(file);
     });
-    if (error) return console.log("Error :", error);
     //move all the files to public folder Later cahnge this part to save the file in AWS
     files.forEach(file => {
       moveFileToPosts_pic(file);
@@ -81,7 +80,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
     // Save the post to the Database
-    console.log(`tags2`, typeof tags, tags);
     const post = await Post.create({
       picture,
       description: req.body.description,
@@ -127,9 +125,7 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
     }
 
     res.status(200).json({ success: true, post: post });
-  } catch (error) {
-    console.log("Error", error);
-  }
+  } catch (error) {}
 });
 
 // @desc    Delete A Post
@@ -147,25 +143,46 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get All Posts
-// @route   GET /api/v1/auth/posts
+// @route   GET /api/v1/auth/posts?limit=
 // @access  Public
-exports.getAllPosts = asyncHandler(async (res, next) => {
-  const posts = await Post.find();
-  if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
-  res.status(200).json({ success: true, posts });
+exports.getAllPosts = asyncHandler(async (req, res, next) => {
+  let limit = +req.query.limit;
+  if (!limit) {
+    limit = "all";
+  }
+  const discoveredPost = await aGetAllPosts(limit, req.user.id);
+  if (!discoveredPost) {
+    if (limit === "all") {
+      posts = await Post.find();
+    } else {
+      posts = await Post.find().sort({ createdAt: -1 }).limit(limit);
+    }
+    if (!posts)
+      return next(
+        new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)
+      );
+    if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
+    return res.status(200).json({ success: true, posts });
+  } else {
+    return res.status(200).json({ success: true, posts: discoveredPost });
+  }
 });
 
 // @desc    Get All Posts With A Hashtag
-// @route   GET /api/v1/auth/posts/hashtags/:hashtag
+// @route   GET /api/v1/auth/posts/hashtags/:hashtag?limit=
 // @access  Public
 exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
-  const posts = await aGetHasTagPostCache(req.params.hashtag.toLowerCase());
-  if (posts) {
-    console.log("hash tag post from ---> REDIS");
-    return res.status(200).json({ success: true, posts });
+  let limit = +req.query.limit;
+  if (!limit) {
+    limit = "all";
   }
+  const posts = await aGetHasTagPostCache(
+    req.params.hashtag.toLowerCase(),
+    limit
+  );
+  if (posts) return res.status(200).json({ success: true, posts });
+
   const postsdb = await Post.find({ tags: `#${req.params.hashtag}` });
-  console.log("hash tag post from ---> DATABASE");
   if (!postsdb) return next(new ErrorResponse("Posts not found. ", 404));
   return res.status(200).json({ success: true, posts: postsdb });
 });
@@ -220,12 +237,7 @@ exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
   const userHomeFeed = await aGetUserHomeFeed(req.params.userName, limit, next);
   //In case the HomeFeed was lost
   if (!userHomeFeed) {
-    let posts;
-    if (limit === "all") {
-      posts = await Post.findByUsername(req.params.userName);
-    } else {
-      posts = await Post.findByUsername(req.params.userName);
-    }
+    const posts = await Post.findByUsername(req.params.userName, limit);
     if (!posts)
       return next(
         new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)

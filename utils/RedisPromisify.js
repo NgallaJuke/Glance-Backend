@@ -69,7 +69,7 @@ exports.aGetPostCache = async (postID, next) => {
   }
 };
 
-exports.aGetHasTagPostCache = async hashtag => {
+exports.aGetHasTagPostCache = async (hashtag, limit) => {
   const postIDs = await ahgetall("Posts");
   let hashTagPost = [];
   for (const postId in postIDs) {
@@ -84,11 +84,42 @@ exports.aGetHasTagPostCache = async hashtag => {
       // TODO : if the user ont followed anymore remove his post from the timeline
       if (!newPost.tags.includes(`#${hashtag}`)) continue;
       hashTagPost.push(newPost);
-      if (hashTagPost.length === Object.keys(postIDs).length) break;
+      if (
+        hashTagPost.length === Object.keys(postIDs).length ||
+        hashTagPost.length == limit
+      )
+        break;
     }
   }
 
   return hashTagPost;
+};
+
+exports.aGetAllPosts = async (limit, reqUserId) => {
+  const postIDs = await ahgetall(`Posts`);
+  if (!postIDs) return;
+  let discoverPost = [];
+  for (const postId in postIDs) {
+    if (postIDs.hasOwnProperty(postId)) {
+      const element = postIDs[postId];
+      let newPost = JSON.parse(element);
+      //check if the post is own by a followed user. If not then remove it from the timeline
+      const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
+      if (!user) continue;
+      let postOwner = JSON.parse(user);
+      if (postOwner._id == reqUserId) continue;
+      newPost.postOwner = JSON.parse(user);
+      // TODO : if the user ont followed anymore remove his post from the timeline
+      discoverPost.push(newPost);
+      if (
+        discoverPost.length === Object.keys(postIDs).length ||
+        discoverPost.length == limit
+      )
+        break;
+    }
+  }
+  console.log(`discoverPost`, discoverPost);
+  return discoverPost;
 };
 
 exports.aGetUserFeed = async (userID, next) => {

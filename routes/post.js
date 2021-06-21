@@ -17,7 +17,7 @@ const {
 const { Protect, Authorize } = require("../middleware/auth");
 // const advancedResults = require("../middleware/advancedResults");
 
-router.route("/").get(getAllPosts);
+router.route("/").get(Protect, getAllPosts);
 router.route("/timeline").get(Protect, GetUserFeed);
 router.route("/:userName/home-timeline").get(Protect, GetUserHomeFeed);
 router.route("/like/:id").get(Protect, GetUserLikedPost);
