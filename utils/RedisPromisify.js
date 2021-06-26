@@ -69,26 +69,40 @@ exports.aGetPostCache = async (postID, next) => {
   }
 };
 
-exports.aGetHasTagPostCache = async (hashtag, limit) => {
-  const postIDs = await ahgetall("Posts");
+exports.aGetHasTagPostCache = async (postsWithGivenHashtag, limit) => {
+  // const postIDs = await ahgetall("Posts");
+  // let hashTagPost = [];
+  // for (const postId in postIDs) {
+  //   if (postIDs.hasOwnProperty(postId)) {
+  //     const element = postIDs[postId];
+  //     if (!element) continue;
+  //     let newPost = JSON.parse(element);
+  //     //check if the post is own by a followed user. If not then remove it from the timeline
+  //     const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
+  //     if (!user) continue;
+  //     newPost.postOwner = JSON.parse(user);
+  //     // TODO : if the user ont followed anymore remove his post from the timeline
+  //     if (!newPost.tags.includes(`#${hashtag}`)) continue;
+  //     hashTagPost.push(newPost);
+  //     if (
+  //       hashTagPost.length === Object.keys(postIDs).length ||
+  //       hashTagPost.length == limit
+  //     )
+  //       break;
+  //   }
+  // }
+
+  // return hashTagPost;
+
   let hashTagPost = [];
-  for (const postId in postIDs) {
-    if (postIDs.hasOwnProperty(postId)) {
-      const element = postIDs[postId];
-      if (!element) continue;
-      let newPost = JSON.parse(element);
-      //check if the post is own by a followed user. If not then remove it from the timeline
-      const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
-      if (!user) continue;
-      newPost.postOwner = JSON.parse(user);
-      // TODO : if the user ont followed anymore remove his post from the timeline
-      if (!newPost.tags.includes(`#${hashtag}`)) continue;
-      hashTagPost.push(newPost);
-      if (
-        hashTagPost.length === Object.keys(postIDs).length ||
-        hashTagPost.length == limit
-      )
-        break;
+
+  for (const post in postsWithGivenHashtag) {
+    if (postsWithGivenHashtag.hasOwnProperty(post)) {
+      const element = postsWithGivenHashtag[post];
+      const postWithHashtag = await ahget("Posts", `PostId:${element._id}`);
+      const parsedPost = JSON.parse(postWithHashtag);
+      hashTagPost.push(parsedPost);
+      if (hashTagPost.length === limit) break;
     }
   }
 
@@ -118,7 +132,6 @@ exports.aGetAllPosts = async (limit, reqUserId) => {
         break;
     }
   }
-  console.log(`discoverPost`, discoverPost);
   return discoverPost;
 };
 

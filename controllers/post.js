@@ -169,22 +169,46 @@ exports.getAllPosts = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get All Posts With A Hashtag
-// @route   GET /api/v1/auth/posts/hashtags/:hashtag?limit=
+// @route   GET /api/v1/auth/posts/hashtags/:hashtag?popular&=limit=
 // @access  Public
 exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
+  const popular = req.query.popular === "true";
   let limit = +req.query.limit;
   if (!limit) {
     limit = "all";
   }
-  const posts = await aGetHasTagPostCache(
-    req.params.hashtag.toLowerCase(),
-    limit
-  );
-  if (posts) return res.status(200).json({ success: true, posts });
 
-  const postsdb = await Post.find({ tags: `#${req.params.hashtag}` });
-  if (!postsdb) return next(new ErrorResponse("Posts not found. ", 404));
-  return res.status(200).json({ success: true, posts: postsdb });
+  let postsWithGivenHashtag = [];
+
+  if (popular) {
+    postsWithGivenHashtag = await Post.find(
+      {
+        tags: `#${req.params.hashtag}`,
+      },
+      {
+        _id: 1,
+      }
+    ).sort({ viewedby: 1 });
+  } else {
+    postsWithGivenHashtag = await Post.find(
+      {
+        tags: `#${req.params.hashtag}`,
+      },
+      {
+        _id: 1,
+      }
+    );
+  }
+  if (!postsWithGivenHashtag)
+    return next(new ErrorResponse("Posts not found. ", 404));
+
+  const posts = await aGetHasTagPostCache(postsWithGivenHashtag, limit);
+
+  return res.status(200).json({ success: true, posts });
+  // return res.status(200).json({ success: true, posts });
+
+  // const postsdb = await Post.find({ tags: `#${req.params.hashtag}` });
+  // return res.status(200).json({ success: true, posts: postsdb });
 });
 
 // @desc    Get A Post
