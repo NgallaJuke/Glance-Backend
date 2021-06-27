@@ -170,7 +170,7 @@ exports.getAllPosts = asyncHandler(async (req, res, next) => {
 
 // @desc    Get All Posts With A Hashtag
 // @route   GET /api/v1/auth/posts/hashtags/:hashtag?popular&=limit=
-// @access  Public
+// @access  Private
 exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
   const popular = req.query.popular === "true";
   let limit = +req.query.limit;
@@ -184,6 +184,7 @@ exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
     postsWithGivenHashtag = await Post.find(
       {
         tags: `#${req.params.hashtag}`,
+        user: { $ne: req.user.id },
       },
       {
         _id: 1,
