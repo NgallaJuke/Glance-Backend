@@ -11,15 +11,17 @@ const {
   SetUserHomeFeed,
   SetUserProfil,
   SetPostCache,
+  aGetAllPosts,
   aGetUserFeed,
   aGetUserHomeFeed,
   aGetPostCache,
+  aGetHasTagPostCache,
   DeletePostsCache,
   aGetUserProfil,
 } = require("../utils/RedisPromisify");
 
 // @desc    Create A Post
-// @route   GET /api/v1/post/create
+// @route   GET /api/v1/posts/create
 // @access  Private/Tailors
 exports.CreatePost = asyncHandler(async (req, res, next) => {
   let picture = [];
@@ -32,7 +34,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
   if (Array.from(req.files.picture).length === 0) {
     const file = req.files.picture;
     fileCheck(req.user.name, file, (count = 0), picture, error);
-    if (error) return console.log("Error :", error);
     // move the file
     moveFileToPosts_pic(file);
   } else {
@@ -44,17 +45,31 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       // move the file
       files.push(file);
     });
-    if (error) return console.log("Error :", error);
     //move all the files to public folder Later cahnge this part to save the file in AWS
     files.forEach(file => {
       moveFileToPosts_pic(file);
     });
   }
   // check if the description has any #(tags) in it
-  const reg = /#\S+/g;
   let tags = [];
-  if (req.body.description.match(reg)) {
-    tags = req.body.description.match(reg);
+  const reg = /#([A-Za-z0-9]+)/g;
+  if (JSON.parse(req.body.tags) && req.body.description.match(reg)) {
+    const newsTags = JSON.parse(req.body.tags).map(
+      tag => "#" + tag.toLowerCase()
+    );
+
+    if (req.body.description.match(reg)) {
+      tags = [...newsTags, ...req.body.description.match(reg)];
+    }
+  } else {
+    if (req.body.description.match(reg)) {
+      tags = [...req.body.description.match(reg)];
+    } else if (JSON.parse(req.body.tags)) {
+      const newsTags = JSON.parse(req.body.tags).map(
+        tag => "#" + tag.toLowerCase()
+      );
+      tags = [...newsTags];
+    }
   }
 
   if (picture.length === 0)
@@ -91,7 +106,6 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (followers) {
         followers.forEach(follower => {
           // Update the followers's Timeline
-          console.log("MONGO --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
@@ -105,20 +119,17 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       if (followers) {
         followers.forEach(follower => {
           // Update the followers's Timeline
-          console.log("REDIS --- Followers Post Set ->", follower);
           SetUserFeed(follower, post.id);
         });
       }
     }
 
     res.status(200).json({ success: true, post: post });
-  } catch (error) {
-    console.log("Error", error);
-  }
+  } catch (error) {}
 });
 
 // @desc    Delete A Post
-// @route   DELETE /api/v1/post/:id/delete
+// @route   DELETE /api/v1/posts/:id/delete
 // @access  Private/Tailors
 exports.DeletePost = asyncHandler(async (req, res, next) => {
   const post = await Post.findById(req.params.id);
@@ -132,12 +143,71 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
 });
 
 // @desc    Get All Posts
-// @route   GET /api/v1/auth/post
+// @route   GET /api/v1/auth/posts?limit=
 // @access  Public
-exports.getAllPosts = asyncHandler(async (res, next) => {
-  const posts = await Post.find();
-  if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
-  res.status(200).json({ success: true, posts });
+exports.getAllPosts = asyncHandler(async (req, res, next) => {
+  let limit = +req.query.limit;
+  if (!limit) {
+    limit = "all";
+  }
+  const discoveredPost = await aGetAllPosts(limit, req.user.id);
+  if (!discoveredPost) {
+    if (limit === "all") {
+      posts = await Post.find();
+    } else {
+      posts = await Post.find().sort({ createdAt: -1 }).limit(limit);
+    }
+    if (!posts)
+      return next(
+        new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)
+      );
+    if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
+    return res.status(200).json({ success: true, posts });
+  } else {
+    return res.status(200).json({ success: true, posts: discoveredPost });
+  }
+});
+
+// @desc    Get All Posts With A Hashtag
+// @route   GET /api/v1/auth/posts/hashtags/:hashtag?popular&=limit=
+// @access  Private
+exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
+  const popular = req.query.popular === "true";
+  let limit = +req.query.limit;
+  if (!limit) {
+    limit = "all";
+  }
+  let postsWithGivenHashtag = [];
+  if (popular)
+    postsWithGivenHashtag = await Post.find(
+      {
+        tags: `#${req.params.hashtag}`,
+        user: { $ne: req.user.id },
+      },
+      {
+        _id: 1,
+      }
+    ).sort({ viewedby: 1 });
+  else
+    postsWithGivenHashtag = await Post.find(
+      {
+        tags: `#${req.params.hashtag}`,
+      },
+      {
+        _id: 1,
+      }
+    );
+
+  if (!postsWithGivenHashtag)
+    return next(new ErrorResponse("Posts not found. ", 404));
+
+  const posts = await aGetHasTagPostCache(postsWithGivenHashtag, limit);
+
+  return res.status(200).json({ success: true, posts });
+  // return res.status(200).json({ success: true, posts });
+
+  // const postsdb = await Post.find({ tags: `#${req.params.hashtag}` });
+  // return res.status(200).json({ success: true, posts: postsdb });
 });
 
 // @desc    Get A Post
@@ -160,7 +230,6 @@ exports.GetSinglePost = asyncHandler(async (req, res, next) => {
 exports.GetUserFeed = asyncHandler(async (req, res, next) => {
   const userTimeline = await aGetUserFeed(req.user.id, next);
   if (!userTimeline) {
-    console.log("NO TImeline in Redis");
     const posts = await Post.find({ user: req.user.id });
     if (!posts)
       return next(
@@ -173,8 +242,6 @@ exports.GetUserFeed = asyncHandler(async (req, res, next) => {
     });
     res.status(200).json({ success: true, timeline: posts });
   } else {
-    console.log("YES TImeline in Redis");
-
     res.status(200).json({
       success: true,
       timeline: userTimeline,
@@ -193,12 +260,7 @@ exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
   const userHomeFeed = await aGetUserHomeFeed(req.params.userName, limit, next);
   //In case the HomeFeed was lost
   if (!userHomeFeed) {
-    let posts;
-    if (limit === "all") {
-      posts = await Post.findByUsername(req.params.userName);
-    } else {
-      posts = await Post.findByUsername(req.params.userName);
-    }
+    const posts = await Post.findByUsername(req.params.userName, limit);
     if (!posts)
       return next(
         new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)
@@ -262,6 +324,7 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Post not liked.", 403));
   post.likes.liker.pull(req.user.id);
   post.likes.count--;
+
   // Update the post in Redis
   SetPostCache(post.id, post);
   // update on database

@@ -16,6 +16,12 @@ const {
 // @route   POST /api/v1/auth/register
 // @access  Public
 exports.Register = asyncHandler(async (req, res, next) => {
+  // trim all the value of the req.body
+  Object.keys(req.body).map(
+    k =>
+      (req.body[k] =
+        typeof req.body[k] == "string" ? req.body[k].trim() : req.body[k])
+  );
   // get this variable from the req.body = form registration
   const { email, userName, role, password } = req.body;
 

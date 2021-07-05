@@ -39,7 +39,7 @@ exports.MakeComment = asyncHandler(async (req, res, next) => {
     return next(
       new ErrorResponse("Internal Error while updating the post", 500)
     );
-  SetPostCache(postdb.id, postdb);
+  await SetPostCache(postdb.id, postdb);
 
   res.status(200).json({ success: true, comment: commentdb });
 });
@@ -48,9 +48,11 @@ exports.MakeComment = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/comments/:postID/comment/all
 // @access  Private
 exports.GetAllPostComments = asyncHandler(async (req, res, next) => {
+  //get the post and populate all the comments
   const post = await Post.findOne({ _id: req.params.postID }).populate(
     "comments.comment"
   );
+
   if (!post)
     return next(
       new ErrorResponse("Internal Error while getting comments", 500)
@@ -60,6 +62,20 @@ exports.GetAllPostComments = asyncHandler(async (req, res, next) => {
     .where("_id")
     .in(post.comments.comment)
     .populate("user", "avatar userName");
+
+  // add the user id to Post collection viewedBy field & update in on the cache
+  // await post.updateOne({
+  //   $addToSet: { viewedBy: req.user.id },
+  // });
+
+  // since the viewedBy must only have unique value, we have to push a Set on the post document and not an Array
+  post.viewedBy.push(req.user.id);
+  const newViewer = [...new Set(post.viewedBy)];
+  post.viewedBy = newViewer;
+
+  await post.save();
+  await SetPostCache(post.id, post);
+
   res.status(200).json({ success: true, comments: comment });
 });
 
@@ -77,7 +93,7 @@ exports.DeleteComment = asyncHandler(async (req, res, next) => {
   const postdb = await Post.findById(req.params.postID);
   if (!postdb)
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
-  SetPostCache(postdb.id, postdb);
+  await SetPostCache(postdb.id, postdb);
 
   res.status(200).json({ success: true, message: "Comment Deleted" });
 });
@@ -102,7 +118,7 @@ exports.LikeComment = asyncHandler(async (req, res, next) => {
   const postdb = await Post.findById(req.params.postID);
   if (!postdb)
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
-  SetPostCache(postdb.id, postdb);
+  await SetPostCache(postdb.id, postdb);
 
   res.status(200).json({ success: true, message: "Comment Liked" });
 });
@@ -127,7 +143,7 @@ exports.DislikeComment = asyncHandler(async (req, res, next) => {
   const postdb = await Post.findById(req.params.postID);
   if (!postdb)
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
-  SetPostCache(postdb.id, postdb);
+  await SetPostCache(postdb.id, postdb);
 
   res.status(200).json({ success: true, message: "Comment Disliked" });
 });

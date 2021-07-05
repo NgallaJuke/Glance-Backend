@@ -45,4 +45,12 @@ redis-server
 npm run dev
 ```
 
+### Help for CRUD directly on Redis or you MongoDB
+
+If you want to directely Fullish Redis or the Database or more requests, then take a look at the script.js file
+I commented t so that you can see what each script does.
+I use it on Dev mode to help be delete documents on the database or the cache or create the dumy users in the \_data/user.json file.
+
+### PS
+
 A lot has to be done with this project but I can't do all this alone (^-^). But I will be adding more things if this get some attention !

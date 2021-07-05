@@ -60,19 +60,21 @@ exports.Protect = asyncHandler(async (req, res, next) => {
     };
     next();
   } catch (error) {
-    return next(new ErrorResponse("An Error Occured", 500));
+    return next(error);
   }
 });
 
 // Grant access to specific roles
-exports.Authorize = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
-    return next(
-      new ErrorResponse(
-        `User's role (${req.user.role}) is not authorized to access this route.`,
-        403
-      )
-    );
-  }
-  return next();
-};
+exports.Authorize =
+  (...roles) =>
+  (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new ErrorResponse(
+          `User's role (${req.user.role}) is not authorized to access this route.`,
+          403
+        )
+      );
+    }
+    return next();
+  };
