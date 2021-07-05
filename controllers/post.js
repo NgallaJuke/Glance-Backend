@@ -177,10 +177,8 @@ exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
   if (!limit) {
     limit = "all";
   }
-
   let postsWithGivenHashtag = [];
-
-  if (popular) {
+  if (popular)
     postsWithGivenHashtag = await Post.find(
       {
         tags: `#${req.params.hashtag}`,
@@ -190,7 +188,7 @@ exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
         _id: 1,
       }
     ).sort({ viewedby: 1 });
-  } else {
+  else
     postsWithGivenHashtag = await Post.find(
       {
         tags: `#${req.params.hashtag}`,
@@ -199,7 +197,7 @@ exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
         _id: 1,
       }
     );
-  }
+
   if (!postsWithGivenHashtag)
     return next(new ErrorResponse("Posts not found. ", 404));
 
