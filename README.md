@@ -10,7 +10,7 @@ On Windows, use the instrutions below to get started.
 ## Branche Master
 
 ```
-AddRedis
+master
 ```
 
 ## Install Node
@@ -48,8 +48,8 @@ npm run dev
 ### Help for CRUD directly on Redis or you MongoDB
 
 If you want to directely Fullish Redis or the Database or more requests, then take a look at the script.js file
-I commented t so that you can see what each script does.
-I use it on Dev mode to help be delete documents on the database or the cache or create the dumy users in the \_data/user.json file.
+I commented it so that you can see what each script does.
+I use it on Dev mode to help me delete documents on the database or the cache or create the dumy users in the \_data/user.json file.
 
 ### PS
 
