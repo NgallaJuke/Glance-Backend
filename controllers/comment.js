@@ -41,7 +41,11 @@ exports.MakeComment = asyncHandler(async (req, res, next) => {
     );
   await SetPostCache(postdb.id, postdb);
 
-  res.status(200).json({ success: true, comment: commentdb });
+  res.status(200).json({
+    type: "success",
+    message: "Comment created",
+    data: commentdb || {},
+  });
 });
 
 // @desc    Get All Comment From A Post
@@ -76,7 +80,11 @@ exports.GetAllPostComments = asyncHandler(async (req, res, next) => {
   await post.save();
   await SetPostCache(post.id, post);
 
-  res.status(200).json({ success: true, comments: comment });
+  res.status(200).json({
+    type: "success",
+    message: "Comments received",
+    data: comment || {},
+  });
 });
 
 // @desc    Delete A Comment
@@ -95,7 +103,11 @@ exports.DeleteComment = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
   await SetPostCache(postdb.id, postdb);
 
-  res.status(200).json({ success: true, message: "Comment Deleted" });
+  res.status(200).json({
+    type: "success",
+    message: "Comment deleted",
+    data: {},
+  });
 });
 
 // @desc    Like A Comment
@@ -120,7 +132,11 @@ exports.LikeComment = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
   await SetPostCache(postdb.id, postdb);
 
-  res.status(200).json({ success: true, message: "Comment Liked" });
+  res.status(200).json({
+    type: "success",
+    message: "Comment liked",
+    data: {},
+  });
 });
 
 // @desc    Dislike A Comment
@@ -145,5 +161,9 @@ exports.DislikeComment = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("Internal Error Post Not Found In DB", 500));
   await SetPostCache(postdb.id, postdb);
 
-  res.status(200).json({ success: true, message: "Comment Disliked" });
+  res.status(200).json({
+    type: "success",
+    message: "Comment disliked",
+    data: {},
+  });
 });

@@ -124,8 +124,18 @@ exports.CreatePost = asyncHandler(async (req, res, next) => {
       }
     }
 
-    res.status(200).json({ success: true, post: post });
-  } catch (error) {}
+    res.status(200).json({
+      type: "success",
+      message: "Post created",
+      data: post || {},
+    });
+  } catch (error) {
+    res.status(200).json({
+      type: "error",
+      message: error.message,
+      data: {},
+    });
+  }
 });
 
 // @desc    Delete A Post
@@ -139,7 +149,11 @@ exports.DeletePost = asyncHandler(async (req, res, next) => {
     );
   DeletePostsCache(post.id);
   await post.deleteOne();
-  res.status(200).json({ success: true, message: "Post Deleted" });
+  res.status(200).json({
+    type: "success",
+    message: "Post deleted",
+    data: {},
+  });
 });
 
 // @desc    Get All Posts
@@ -151,20 +165,29 @@ exports.getAllPosts = asyncHandler(async (req, res, next) => {
     limit = "all";
   }
   const discoveredPost = await aGetAllPosts(limit, req.user.id);
-  if (!discoveredPost) {
-    if (limit === "all") {
-      posts = await Post.find();
-    } else {
-      posts = await Post.find().sort({ createdAt: -1 }).limit(limit);
-    }
+  if (discoveredPost) {
+    return res.status(200).json({
+      type: "success",
+      message: "Posts received",
+      data: discoveredPost || {},
+    });
+  } else {
+    const posts =
+      limit === "all"
+        ? await Post.find()
+        : await Post.find().sort({ createdAt: -1 }).limit(limit);
+
     if (!posts)
       return next(
         new ErrorResponse("Posts not found. Or User hase no Post Yet ", 404)
       );
     if (!posts) return next(new ErrorResponse("Posts not found. ", 404));
-    return res.status(200).json({ success: true, posts });
-  } else {
-    return res.status(200).json({ success: true, posts: discoveredPost });
+
+    return res.status(200).json({
+      type: "success",
+      message: "Posts received",
+      data: posts || {},
+    });
   }
 });
 
@@ -203,11 +226,11 @@ exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
 
   const posts = await aGetHasTagPostCache(postsWithGivenHashtag, limit);
 
-  return res.status(200).json({ success: true, posts });
-  // return res.status(200).json({ success: true, posts });
-
-  // const postsdb = await Post.find({ tags: `#${req.params.hashtag}` });
-  // return res.status(200).json({ success: true, posts: postsdb });
+  return res.status(200).json({
+    type: "success",
+    message: "Posts hashtag received",
+    data: posts || {},
+  });
 });
 
 // @desc    Get A Post
@@ -215,13 +238,22 @@ exports.getHashTagPosts = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.GetSinglePost = asyncHandler(async (req, res, next) => {
   const post = await aGetPostCache(req.params.id, next);
-  if (!post) {
-    const post = await Post.findById(req.params.id);
-    if (!post) return next(new ErrorResponse("Post not found", 404));
-    SetPostCache(req.params.id, post);
-    res.status(200).json({ success: true, post });
+  if (post) {
+    res.status(200).json({
+      type: "success",
+      message: "Single post received",
+      data: JSON.parse(post) || {},
+    });
+  } else {
+    const postdb = await Post.findById(req.params.id);
+    if (!postdb) return next(new ErrorResponse("Post not found", 404));
+    SetPostCache(req.params.id, postdb);
+    return res.status(200).json({
+      type: "success",
+      message: "Single post received",
+      data: postdb || {},
+    });
   }
-  res.status(200).json({ success: true, post: JSON.parse(post) });
 });
 
 // @desc    Get User's Feed
@@ -240,11 +272,16 @@ exports.GetUserFeed = asyncHandler(async (req, res, next) => {
       SetPostCache(post.id, post);
       SetUserFeed(req.user.id, post.id);
     });
-    res.status(200).json({ success: true, timeline: posts });
+    res.status(200).json({
+      type: "success",
+      message: "Timeline received",
+      data: posts || {},
+    });
   } else {
     res.status(200).json({
-      success: true,
-      timeline: userTimeline,
+      type: "success",
+      message: "Timeline received",
+      data: userTimeline || {},
     });
   }
 });
@@ -270,11 +307,16 @@ exports.GetUserHomeFeed = asyncHandler(async (req, res, next) => {
       SetPostCache(post._id, post);
       SetUserHomeFeed(req.params.userName, post.id);
     });
-    return res.status(200).json({ success: true, timeline: posts });
+    return res.status(200).json({
+      type: "success",
+      message: "Home Timeline received",
+      data: posts || {},
+    });
   }
   res.status(200).json({
-    success: true,
-    timeline: userHomeFeed,
+    type: "success",
+    message: "Home Timeline received",
+    data: userHomeFeed || {},
   });
 });
 
@@ -288,7 +330,11 @@ exports.GetUserLikedPost = asyncHandler(async (req, res, next) => {
   });
   if (!posts) return next(new ErrorResponse("Post not found", 404));
 
-  res.status(200).json({ success: true, likedPost: posts });
+  res.status(200).json({
+    type: "success",
+    message: "Liked posts received",
+    data: posts || {},
+  });
 });
 
 // // @desc    Like A Post
@@ -308,7 +354,11 @@ exports.LikePost = asyncHandler(async (req, res, next) => {
   SetPostCache(post.id, post);
   //update the post in DB
   await post.save();
-  res.status(200).json({ success: true, post });
+  res.status(200).json({
+    type: "success",
+    message: "Post liked",
+    data: post || {},
+  });
 });
 
 // // @desc    UnLike A Post
@@ -329,7 +379,11 @@ exports.UnlikePost = asyncHandler(async (req, res, next) => {
   SetPostCache(post.id, post);
   // update on database
   post.save();
-  res.status(200).json({ success: true, post });
+  res.status(200).json({
+    type: "success",
+    message: "Post disliked",
+    data: post || {},
+  });
 });
 
 // // @desc    Save A Post
@@ -348,7 +402,11 @@ exports.SavePost = asyncHandler(async (req, res, next) => {
   user.save();
   // update the user in Redis
   SetUserProfil(req.user.name, user);
-  res.status(200).json({ success: true, post });
+  res.status(200).json({
+    type: "success",
+    message: "Post saved",
+    data: post || {},
+  });
 });
 
 // // @desc    Delete A Saved Post
@@ -364,9 +422,11 @@ exports.DeleteSavedPost = asyncHandler(async (req, res, next) => {
   user.save();
   // update the user in Redis
   SetUserProfil(req.user.name, user);
-  res
-    .status(200)
-    .json({ success: true, post: "The saved post has been deleted." });
+  res.status(200).json({
+    type: "success",
+    message: "Saved post deleted",
+    data: {},
+  });
 });
 
 /* -----TODO----- */

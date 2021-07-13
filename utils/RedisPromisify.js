@@ -25,38 +25,35 @@ exports.SetUserHomeFeed = async (userName, postID) => {
   await ahset(`UserHomeFeeds:${userName}`, `Post:${postID}`, postID);
 };
 
-exports.aGetUserProfil = async (userName, next) => {
+exports.aGetUserProfil = async userName => {
   const UserProfile = await aget(`UserProfil:${userName}`);
   if (UserProfile) {
-    return UserProfile;
+    return JSON.parse(UserProfile);
   } else {
     return;
   }
 };
 
-exports.aGetAllUserProfil = async (req, next) => {
+exports.aGetAllUserProfil = async reqUserName => {
   let keys = await akeys("*UserProfil*");
   if (keys) {
     if (keys.includes("UserProfil:undefined"))
       keys = keys.filter(key => key !== "UserProfil:undefined");
-    let i = 0;
+
     let users = [];
     for (const key in keys) {
       const element = keys[key];
       const userName = element.substring(11);
+      if (userName === reqUserName || userName === "undefined") continue;
+
       const user = await aget(`UserProfil:${userName}`);
-      if (!user)
-        return next(new ErrorResponse("Error get cached user's profile", 500));
-      if (userName !== req.user.name && userName !== "undefined") {
-        i++;
-        users.push(JSON.parse(user));
-        if (i === keys.length - 1) {
-          return users;
-        }
-      }
+      if (!user) return {};
+      users.push(JSON.parse(user));
     }
+    console.log(`users`, users);
+    return users;
   } else {
-    return;
+    return {};
   }
 };
 
@@ -70,30 +67,6 @@ exports.aGetPostCache = async (postID, next) => {
 };
 
 exports.aGetHasTagPostCache = async (postsWithGivenHashtag, limit) => {
-  // const postIDs = await ahgetall("Posts");
-  // let hashTagPost = [];
-  // for (const postId in postIDs) {
-  //   if (postIDs.hasOwnProperty(postId)) {
-  //     const element = postIDs[postId];
-  //     if (!element) continue;
-  //     let newPost = JSON.parse(element);
-  //     //check if the post is own by a followed user. If not then remove it from the timeline
-  //     const user = await aget(`UserProfil:${newPost.postOwner.userName}`);
-  //     if (!user) continue;
-  //     newPost.postOwner = JSON.parse(user);
-  //     // TODO : if the user ont followed anymore remove his post from the timeline
-  //     if (!newPost.tags.includes(`#${hashtag}`)) continue;
-  //     hashTagPost.push(newPost);
-  //     if (
-  //       hashTagPost.length === Object.keys(postIDs).length ||
-  //       hashTagPost.length == limit
-  //     )
-  //       break;
-  //   }
-  // }
-
-  // return hashTagPost;
-
   let hashTagPost = [];
 
   for (const post in postsWithGivenHashtag) {

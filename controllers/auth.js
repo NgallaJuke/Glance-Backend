@@ -67,10 +67,15 @@ exports.Register = asyncHandler(async (req, res, next) => {
     SetUserProfil(userName, user);
     //"validateBeforeSave" if set to true will run a validation before the user is saved to the database and not if set to false
     await user.save({ validateBeforeSave: true });
-    res.status(200).json({ success: true, data: "Email sent" });
+    res.status(200).json({
+      type: "success",
+      message:
+        "Registration successful. Please check your email to confirm your registration!",
+      data: {},
+    });
   } catch (error) {
     console.log(error);
-    next(new ErrorResponse("Email couldn't be sent ", 500));
+    next(new ErrorResponse("Email could not be sent", 500));
   }
 });
 
@@ -115,7 +120,11 @@ exports.DeleteUser = asyncHandler(async (req, res) => {
   if (!user) return next(new ErrorResponse("Invalid credentials", 401));
   await user.deleteOne();
   DeleteUserProfil(req.user.name);
-  res.status(200).json({ success: true, message: "User Deleted Succesfully" });
+  res.status(200).json({
+    type: "success",
+    message: "User Deleted Succesfully",
+    data: {},
+  });
 });
 
 // @desc    Login User
@@ -185,22 +194,33 @@ exports.Logout = asyncHandler(async (req, res, next) => {
   // save the change to database and then to cache
   await user.save();
   SetUserProfil(user.userName, user);
-  res.status(200).json({ success: true, message: "User Logged Out." });
+  res.status(200).json({
+    type: "success",
+    message: "User Logged Out",
+    data: {},
+  });
 });
 
 // @desc    Get Current Logged User
 // @route   GET /api/v1/auth/current-user
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
-  const userRedis = await aGetUserProfil(req.user.name, next);
-  if (userRedis) {
-    let UserProfil = JSON.parse(userRedis);
-    res.status(200).json({ success: true, UserProfil });
+  const user = await aGetUserProfil(req.user.name, next);
+  if (user) {
+    res.status(200).json({
+      type: "success",
+      message: "User received from cache",
+      data: user || {},
+    });
   } else {
     const user = await User.findById(req.user.id);
     if (!user) return next(new ErrorResponse("The User is not found", 404));
     SetUserProfil(user.userName, user);
-    res.status(200).json({ success: true, UserProfil: user });
+    res.status(200).json({
+      type: "success",
+      message: "User received from cache",
+      data: user || {},
+    });
   }
 });
 
@@ -226,7 +246,11 @@ exports.ForgetPassword = asyncHandler(async (req, res, next) => {
       subject: "Password rest Token",
       message,
     });
-    res.status(200).json({ success: true, data: "Email sent" });
+    res.status(200).json({
+      type: "success",
+      message: "Email sent",
+      data: {},
+    });
   } catch (error) {
     console.log(error);
     user.resetPasswordToken = undefined;
@@ -279,7 +303,11 @@ exports.ChangePassword = asyncHandler(async (req, res, next) => {
   await user.save(); //the pre.save methode on the user's Schema will hash the new password
   // reset the UserProfile in Redis
   SetUserProfil(user.userName, user);
-  res.status(200).json({ success: true, UserProfil: user });
+  res.status(200).json({
+    type: "success",
+    message: "Password changed",
+    data: user || {},
+  });
 });
 
 /* ------------------------------------------------------ */

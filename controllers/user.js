@@ -12,21 +12,28 @@ const {
 // @route   GET /api/v1/users
 // @access  Private
 exports.getAllUsers = asyncHandler(async (req, res, next) => {
-  // const usersRedis = await aGetAllUserProfil(req, next);
-  // if (usersRedis) {
-  //   console.log("REDIS");
-  //   res.status(200).json({ success: true, users: usersRedis });
-  // } else {
-  const usersdb = await User.find();
-  if (!usersdb) {
-    return next(new ErrorResponse("User not found in DB.", 404));
+  const users = await aGetAllUserProfil(req.user.name);
+  console.log(`users`, users);
+  if (users) {
+    res.status(200).json({
+      type: "success",
+      message: "Users received",
+      data: users || {},
+    });
+  } else {
+    const users_from_db = await User.find();
+    if (!users_from_db) {
+      return next(new ErrorResponse("User not found in DB.", 404));
+    }
+    users_from_db.forEach(user => {
+      SetUserProfil(user.userName, user);
+    });
+    res.status(200).json({
+      type: "success",
+      message: "Users received",
+      data: users_from_db || {},
+    });
   }
-  console.log("MONGO");
-  usersdb.forEach(user => {
-    SetUserProfil(user.userName, user);
-  });
-  res.status(200).json({ success: true, users: usersdb });
-  // }
 });
 
 // @desc    Get A User
@@ -35,14 +42,22 @@ exports.getAllUsers = asyncHandler(async (req, res, next) => {
 exports.GetSingleUser = asyncHandler(async (req, res, next) => {
   const user = await aGetUserProfil(req.params.userName, next);
   if (user) {
-    res.status(200).json({ success: true, UserProfil: JSON.parse(user) });
+    res.status(200).json({
+      type: "success",
+      message: "User received",
+      data: user || {},
+    });
   } else {
-    const userdb = await User.findOne({ userName: req.params.userName });
-    if (!userdb) {
+    const user_from_db = await User.findOne({ userName: req.params.userName });
+    if (!user_from_db) {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
-    SetUserProfil(userdb.userName, userdb);
-    res.status(200).json({ success: true, UserProfil: userdb });
+    SetUserProfil(user_from_db.userName, user_from_db);
+    res.status(200).json({
+      type: "success",
+      message: "User received",
+      data: user_from_db || {},
+    });
   }
 });
 
@@ -50,33 +65,58 @@ exports.GetSingleUser = asyncHandler(async (req, res, next) => {
 // @route   GET /api/v1/users/user/:id
 // @access  Public
 exports.GetSingleUserInDB = asyncHandler(async (req, res, next) => {
-  const userdb = await User.findById(req.params.id);
-  if (!userdb) {
+  const user_from_db = await User.findById(req.params.id);
+  if (!user_from_db) {
     return next(new ErrorResponse("User not found in DB.", 404));
   }
-  res.status(200).json({ success: true, UserProfil: userdb });
+  res.status(200).json({
+    type: "success",
+    message: "User received",
+    data: user_from_db || {},
+  });
 });
 
 // @desc    Get All User's Followers
 // @route   GET /api/v1/users/all-follower/:id
 // @access  Public
 exports.getAllFollower = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.params.id).populate("follower");
-  if (!user) {
+  // const user = await aGetUserProfil(req.params.id);
+  // if (user) {
+  //   const followers = user.follower.map(async person => {
+  //     await aGetUserProfil(person, next);
+  //   });
+
+  //   res.status(200).json({
+  //     type: "success",
+  //     message: "User's followers received from cache",
+  //     data: followers || {},
+  //   });
+  // } else {
+  const user_from_db = await User.findById(req.params.id).populate("follower");
+  if (!user_from_db) {
     return next(new ErrorResponse("User not found in DB.", 404));
   }
-  res.status(200).json({ success: true, follower: user.follower });
+  res.status(200).json({
+    type: "success",
+    message: "User's followers received from db",
+    data: user_from_db.follower || {},
+  });
+  // }
 });
 
 // @desc    Get All User's Following
 // @route   GET /api/v1/users/all-following/:id
 // @access  Public
 exports.getAllFollowing = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.params.id).populate("following");
-  if (!user) {
+  const user_from_db = await User.findById(req.params.id).populate("following");
+  if (!user_from_db) {
     return next(new ErrorResponse("User not found in DB.", 404));
   }
-  res.status(200).json({ success: true, following: user.following });
+  res.status(200).json({
+    type: "success",
+    message: "User following received from db",
+    data: user_from_db.following || {},
+  });
 });
 
 // @desc    Follow a User
@@ -123,7 +163,11 @@ exports.FollowUser = asyncHandler(async (req, res, next) => {
   if (!user) return next(new ErrorResponse("User Not Found.", 404));
   // set the follower user a UserProfil cache
   SetUserProfil(req.user.name, user);
-  res.status(200).json({ success: true, followed, user });
+  res.status(200).json({
+    type: "success",
+    message: "User unfollowed",
+    data: [followed, user] || [],
+  });
 });
 
 // @desc    Unfollow a User
@@ -162,7 +206,11 @@ exports.UnfollowUser = asyncHandler(async (req, res, next) => {
   );
   // set the follower user a UserProfil cache
   SetUserProfil(req.user.name, user);
-  res.status(200).json({ success: true, unfollowed, user });
+  res.status(200).json({
+    type: "success",
+    message: "User unfollowed",
+    data: [unfollowed, user] || [],
+  });
 });
 
 // @desc    Block a User
@@ -202,7 +250,11 @@ exports.BlockUser = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   );
   SetUserProfil(req.user.name, user);
-  res.status(200).json({ success: true, blocked, user });
+  res.status(200).json({
+    type: "success",
+    message: "User blocked",
+    data: [blocked, user] || [],
+  });
 });
 
 // @desc    Unblock a User
@@ -223,7 +275,7 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
   let user = await User.findById(req.user.id);
   // check if the user exist
   if (!user) return next(new ErrorResponse("User Not Found", 404));
-  blocked = await User.findByIdAndUpdate(
+  unblocked = await User.findByIdAndUpdate(
     req.params.id,
     { $pull: { blockedBy: req.user.id } },
     { new: true, runValidators: true }
@@ -235,7 +287,11 @@ exports.UnblockUser = asyncHandler(async (req, res, next) => {
     { new: true, runValidators: true }
   );
   SetUserProfil(req.user.name, user);
-  res.status(200).json({ success: true, blocked, user });
+  res.status(200).json({
+    type: "success",
+    message: "User unblocked",
+    data: [unblocked, user] || [],
+  });
 });
 
 // @desc    Update a User
@@ -255,7 +311,11 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
     runValidators: true,
   });
   SetUserProfil(req.user.name, user);
-  res.status(200).json({ success: true, user });
+  res.status(200).json({
+    type: "success",
+    message: "User updated",
+    data: user || {},
+  });
 });
 
 // @desc    User Change Profile Picture
@@ -264,7 +324,7 @@ exports.UpdateUser = asyncHandler(async (req, res, next) => {
 exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
   if (req.query.reset === "yes") {
     // insert the filemane in the database
-    const userdb = await User.findByIdAndUpdate(
+    const user_from_db = await User.findByIdAndUpdate(
       req.user.id,
       {
         avatar: path.join(__dirname + `../../public/avatars/default.png`),
@@ -274,11 +334,15 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
         runValidators: true,
       }
     );
-    if (!userdb) {
+    if (!user_from_db) {
       return next(new ErrorResponse("User not found in DB.", 404));
     }
-    SetUserProfil(req.user.name, userdb);
-    res.status(200).json({ success: true, user: userdb });
+    SetUserProfil(req.user.name, user_from_db);
+    res.status(200).json({
+      type: "success",
+      message: "User updated",
+      data: user_from_db || {},
+    });
   } else {
     if (!req.files) {
       return next(new ErrorResponse("Please add a photo", 400));
@@ -311,7 +375,7 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
         );
       }
       // insert the filemane in the database
-      const userdb = await User.findByIdAndUpdate(
+      const user_from_db = await User.findByIdAndUpdate(
         req.user.id,
         {
           avatar: path.join(__dirname + `../../public/avatars/${file.name}`),
@@ -321,11 +385,15 @@ exports.UpdateUserProfil = asyncHandler(async (req, res, next) => {
           runValidators: true,
         }
       );
-      if (!userdb) {
+      if (!user_from_db) {
         return next(new ErrorResponse("User not found in DB.", 404));
       }
-      SetUserProfil(req.user.name, userdb);
-      res.status(200).json({ success: true, user: userdb });
+      SetUserProfil(req.user.name, user_from_db);
+      res.status(200).json({
+        type: "success",
+        message: "User updated",
+        data: user_from_db || {},
+      });
     });
   }
 });
