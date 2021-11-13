@@ -8,14 +8,16 @@ const fs = require("fs");
 exports.Protect = asyncHandler(async (req, res, next) => {
   let token;
   // check if the authorization header is set and take the token in it Esle get the Token from the cookie
+
+
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
-  } /*  else if (req.cookie.tpken) {
+  } else if (req.cookie.token) {
     token = req.cookie.token;
-  } */
+  }
 
   // check if the token is here
   if (!token) next(new ErrorResponse("Not authorize to acces this route", 401));
@@ -67,14 +69,14 @@ exports.Protect = asyncHandler(async (req, res, next) => {
 // Grant access to specific roles
 exports.Authorize =
   (...roles) =>
-  (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return next(
-        new ErrorResponse(
-          `User's role (${req.user.role}) is not authorized to access this route.`,
-          403
-        )
-      );
-    }
-    return next();
-  };
+    (req, res, next) => {
+      if (!roles.includes(req.user.role)) {
+        return next(
+          new ErrorResponse(
+            `User's role (${req.user.role}) is not authorized to access this route.`,
+            403
+          )
+        );
+      }
+      return next();
+    };

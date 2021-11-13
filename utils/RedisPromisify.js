@@ -27,6 +27,8 @@ exports.SetUserHomeFeed = async (userName, postID) => {
 
 exports.aGetUserProfil = async userName => {
   const UserProfile = await aget(`UserProfil:${userName}`);
+  console.log('UserProfile', UserProfile);
+
   if (UserProfile) {
     return JSON.parse(UserProfile);
   } else {
@@ -164,7 +166,7 @@ exports.aGetUserHomeFeed = async (userName, limit, next) => {
     for (const postId in postIDs) {
       arr.push(postId);
     }
-    for (let n = arr.length; n--; ) {
+    for (let n = arr.length; n--;) {
       const element = postIDs[arr[n]];
       const cachedPost = await ahget("Posts", `PostId:${element}`);
       if (!cachedPost) {

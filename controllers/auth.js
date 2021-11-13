@@ -12,6 +12,7 @@ const {
   aGetUserProfil,
   DeleteUserProfil,
 } = require("../utils/RedisPromisify");
+
 // @desc    Register User
 // @route   POST /api/v1/auth/register
 // @access  Public
@@ -19,8 +20,8 @@ exports.Register = asyncHandler(async (req, res, next) => {
   // trim all the value of the req.body
   Object.keys(req.body).map(
     k =>
-      (req.body[k] =
-        typeof req.body[k] == "string" ? req.body[k].trim() : req.body[k])
+    (req.body[k] =
+      typeof req.body[k] == "string" ? req.body[k].trim() : req.body[k])
   );
   // get this variable from the req.body = form registration
   const { email, userName, role, password } = req.body;
@@ -206,6 +207,8 @@ exports.Logout = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.CurrentUser = asyncHandler(async (req, res, next) => {
   const user = await aGetUserProfil(req.user.name, next);
+  console.log('user1', user);
+
   if (user) {
     res.status(200).json({
       type: "success",
@@ -214,6 +217,7 @@ exports.CurrentUser = asyncHandler(async (req, res, next) => {
     });
   } else {
     const user = await User.findById(req.user.id);
+    console.log('user2', user);
     if (!user) return next(new ErrorResponse("The User is not found", 404));
     SetUserProfil(user.userName, user);
     res.status(200).json({
