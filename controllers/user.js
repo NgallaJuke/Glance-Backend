@@ -112,6 +112,8 @@ exports.getAllFollowing = asyncHandler(async (req, res, next) => {
   if (!user_from_db) {
     return next(new ErrorResponse("User not found in DB.", 404));
   }
+  console.log("user_from_db.following", user_from_db.following);
+
   res.status(200).json({
     type: "success",
     message: "User following received from db",
