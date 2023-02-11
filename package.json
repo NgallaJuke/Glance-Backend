@@ -35,7 +35,7 @@
     "xss-clean": "^0.1.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.14"
+    "nodemon": "^2.0.20"
   },
   "optionalDependencies": {
     "fsevents": "^2.1.2"
